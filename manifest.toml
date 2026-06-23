@@ -1,0 +1,11 @@
+[application]
+name = "Bedtime Checklist"
+packageId = "com.bedtime.checklist"
+version = "1.0.0"
+versionCode = 1
+
+[application.display]
+label = "Bedtime Checklist"
+
+[platform]
+minSdkVersion = "0.22"

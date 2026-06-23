@@ -1,0 +1,11 @@
+node_modules/
+.vega/
+*.vpkg
+dist/
+build/
+.DS_Store
+*.log
+.env
+.env.local
+web-companion/node_modules/
+web-companion/dist/
