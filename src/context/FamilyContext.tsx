@@ -6,7 +6,7 @@ import React, {
   useCallback,
   ReactNode,
 } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import {
   Child,
   ChecklistItem,
@@ -17,6 +17,8 @@ import {
   Screen,
 } from '../types';
 import {
+  getLastFamilyId,
+  saveLastFamilyId,
   createFamily,
   getFamilyInfo,
   subscribeToChildren,
@@ -35,11 +37,11 @@ import {
   addReward,
   removeReward,
   updateFamilyPin,
-  seedDefaults,
+  seedDefaultsForChild,
+  seedRewards,
 } from '../firebase/database';
 import { defaultChecklistItems, defaultRewards } from '../theme';
 
-const FAMILY_ID_KEY = '@bedtime_family_id';
 
 function generateFamilyId(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -57,7 +59,7 @@ interface FamilyContextValue {
   isSetupComplete: boolean;
 
   children: Child[];
-  checklistItems: ChecklistItem[];
+  checklistItems: Record<string, ChecklistItem[]>;
   rewards: RewardItem[];
   tonight: Record<string, TonightProgress>;
   history: Record<string, RewardHistoryEntry[]>;
@@ -77,13 +79,15 @@ interface FamilyContextValue {
   editChild: (childId: string, name: string, avatar: string) => Promise<void>;
   deleteChild: (childId: string) => Promise<void>;
 
-  addNewChecklistItem: (title: string, icon: string) => Promise<void>;
+  addNewChecklistItem: (childId: string, title: string, icon: string) => Promise<void>;
   editChecklistItem: (
+    childId: string,
     itemId: string,
     title: string,
     icon: string,
   ) => Promise<void>;
-  deleteChecklistItem: (itemId: string) => Promise<void>;
+  deleteChecklistItem: (childId: string, itemId: string) => Promise<void>;
+  getChecklistForChild: (childId: string) => ChecklistItem[];
 
   addNewReward: (title: string, icon: string) => Promise<void>;
   deleteReward: (rewardId: string) => Promise<void>;
@@ -112,7 +116,7 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
   const [isSetupComplete, setIsSetupComplete] = useState(false);
 
   const [childrenList, setChildrenList] = useState<Child[]>([]);
-  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [checklistItems, setChecklistItems] = useState<Record<string, ChecklistItem[]>>({});
   const [rewards, setRewards] = useState<RewardItem[]>([]);
   const [tonight, setTonight] = useState<Record<string, TonightProgress>>({});
   const [history, setHistory] = useState<Record<string, RewardHistoryEntry[]>>(
@@ -126,7 +130,7 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
 
   useEffect(() => {
     (async () => {
-      const storedId = await AsyncStorage.getItem(FAMILY_ID_KEY);
+      const storedId = await getLastFamilyId();
       if (storedId) {
         const info = await getFamilyInfo(storedId);
         if (info) {
@@ -144,13 +148,24 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
 
     const unsubs = [
       subscribeToChildren(familyId, setChildrenList),
-      subscribeToChecklistItems(familyId, setChecklistItems),
       subscribeToRewards(familyId, setRewards),
       subscribeToTonight(familyId, setTonight),
     ];
 
     return () => unsubs.forEach((fn) => fn());
   }, [familyId]);
+
+  useEffect(() => {
+    if (!familyId || childrenList.length === 0) return;
+
+    const unsubs = childrenList.map((child) =>
+      subscribeToChecklistItems(familyId, child.id, (items) => {
+        setChecklistItems((prev) => ({ ...prev, [child.id]: items }));
+      }),
+    );
+
+    return () => unsubs.forEach((fn) => fn());
+  }, [familyId, childrenList]);
 
   useEffect(() => {
     if (!familyId || childrenList.length === 0) return;
@@ -234,31 +249,39 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
   );
 
   const addNewChecklistItem = useCallback(
-    async (title: string, icon: string) => {
+    async (childId: string, title: string, icon: string) => {
       if (!familyId) return;
-      await addChecklistItem(familyId, {
+      const childItems = checklistItems[childId] || [];
+      await addChecklistItem(familyId, childId, {
         title,
         icon,
-        order: checklistItems.length,
+        order: childItems.length,
       });
     },
-    [familyId, checklistItems.length],
+    [familyId, checklistItems],
   );
 
   const editChecklistItem = useCallback(
-    async (itemId: string, title: string, icon: string) => {
+    async (childId: string, itemId: string, title: string, icon: string) => {
       if (!familyId) return;
-      await updateChecklistItem(familyId, itemId, { title, icon });
+      await updateChecklistItem(familyId, childId, itemId, { title, icon });
     },
     [familyId],
   );
 
   const deleteChecklistItem = useCallback(
-    async (itemId: string) => {
+    async (childId: string, itemId: string) => {
       if (!familyId) return;
-      await removeChecklistItem(familyId, itemId);
+      await removeChecklistItem(familyId, childId, itemId);
     },
     [familyId],
+  );
+
+  const getChecklistForChild = useCallback(
+    (childId: string) => {
+      return checklistItems[childId] || [];
+    },
+    [checklistItems],
   );
 
   const addNewReward = useCallback(
@@ -290,18 +313,23 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
       const id = generateFamilyId();
       await createFamily(id, name, pin);
 
+      const childIds: string[] = [];
       for (let i = 0; i < childNames.length; i++) {
         const avatars = ['🌙', '⭐', '🦉', '🐻'];
-        await addChild(id, {
+        const childId = await addChild(id, {
           name: childNames[i],
           avatar: avatars[i % avatars.length],
           order: i,
         });
+        childIds.push(childId);
       }
 
-      await seedDefaults(id, defaultChecklistItems, defaultRewards);
+      for (const childId of childIds) {
+        await seedDefaultsForChild(id, childId, defaultChecklistItems);
+      }
+      await seedRewards(id, defaultRewards);
 
-      await AsyncStorage.setItem(FAMILY_ID_KEY, id);
+      await saveLastFamilyId(id);
       setFamilyId(id);
       setFamilyName(name);
       setIsSetupComplete(true);
@@ -312,7 +340,8 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
   const getChildProgress = useCallback(
     (childId: string) => {
       const progress = tonight[childId];
-      const total = checklistItems.length;
+      const childItems = checklistItems[childId] || [];
+      const total = childItems.length;
       if (!progress?.items) return { completed: 0, total };
       const completed = Object.values(progress.items).filter(Boolean).length;
       return { completed, total };
@@ -343,6 +372,7 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
         addNewChecklistItem,
         editChecklistItem,
         deleteChecklistItem,
+        getChecklistForChild,
         addNewReward,
         deleteReward,
         changePin,

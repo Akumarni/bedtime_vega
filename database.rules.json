@@ -9,12 +9,12 @@
         },
         "children": {
           "$childId": {
-            ".validate": "newData.hasChildren(['name', 'avatar', 'order'])"
-          }
-        },
-        "checklistItems": {
-          "$itemId": {
-            ".validate": "newData.hasChildren(['title', 'icon', 'order'])"
+            ".validate": "newData.hasChildren(['name', 'avatar', 'order'])",
+            "checklistItems": {
+              "$itemId": {
+                ".validate": "newData.hasChildren(['title', 'icon', 'order'])"
+              }
+            }
           }
         },
         "rewards": {
@@ -32,6 +32,12 @@
     },
     "history": {
       "$familyId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "devices": {
+      "$deviceId": {
         ".read": true,
         ".write": true
       }

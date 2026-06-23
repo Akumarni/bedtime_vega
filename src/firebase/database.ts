@@ -33,6 +33,20 @@ function getTodayKey(): string {
   return now.toISOString().split('T')[0];
 }
 
+// --- Device-local family ID persistence (replaces AsyncStorage) ---
+
+const DEVICE_CONFIG_KEY = 'bedtime_tv_device';
+
+export async function getLastFamilyId(): Promise<string | null> {
+  const snapshot = await get(ref(database, `devices/${DEVICE_CONFIG_KEY}`));
+  if (!snapshot.exists()) return null;
+  return snapshot.val().familyId || null;
+}
+
+export async function saveLastFamilyId(familyId: string): Promise<void> {
+  await set(ref(database, `devices/${DEVICE_CONFIG_KEY}`), { familyId });
+}
+
 // --- Family Setup ---
 
 export async function createFamily(
@@ -102,13 +116,14 @@ export function subscribeToChildren(
   return () => off(dbRef, 'value', handler);
 }
 
-// --- Checklist Items ---
+// --- Checklist Items (per child) ---
 
 export async function addChecklistItem(
   familyId: string,
+  childId: string,
   item: Omit<ChecklistItem, 'id'>,
 ): Promise<string> {
-  const newRef = push(familyRef(familyId, 'checklistItems'));
+  const newRef = push(familyRef(familyId, `children/${childId}/checklistItems`));
   const id = newRef.key!;
   await set(newRef, { ...item, id });
   return id;
@@ -116,24 +131,27 @@ export async function addChecklistItem(
 
 export async function updateChecklistItem(
   familyId: string,
+  childId: string,
   itemId: string,
   updates: Partial<ChecklistItem>,
 ): Promise<void> {
-  await update(familyRef(familyId, `checklistItems/${itemId}`), updates);
+  await update(familyRef(familyId, `children/${childId}/checklistItems/${itemId}`), updates);
 }
 
 export async function removeChecklistItem(
   familyId: string,
+  childId: string,
   itemId: string,
 ): Promise<void> {
-  await remove(familyRef(familyId, `checklistItems/${itemId}`));
+  await remove(familyRef(familyId, `children/${childId}/checklistItems/${itemId}`));
 }
 
 export function subscribeToChecklistItems(
   familyId: string,
+  childId: string,
   callback: (items: ChecklistItem[]) => void,
 ): () => void {
-  const dbRef = familyRef(familyId, 'checklistItems');
+  const dbRef = familyRef(familyId, `children/${childId}/checklistItems`);
   const handler = onValue(dbRef, (snapshot) => {
     const data = snapshot.val();
     if (!data) {
@@ -273,14 +291,20 @@ export async function getChildHistory(
 
 // --- Seed defaults on first setup ---
 
-export async function seedDefaults(
+export async function seedDefaultsForChild(
   familyId: string,
+  childId: string,
   checklistItems: { title: string; icon: string }[],
-  rewards: { title: string; icon: string }[],
 ): Promise<void> {
   for (let i = 0; i < checklistItems.length; i++) {
-    await addChecklistItem(familyId, { ...checklistItems[i], order: i });
+    await addChecklistItem(familyId, childId, { ...checklistItems[i], order: i });
   }
+}
+
+export async function seedRewards(
+  familyId: string,
+  rewards: { title: string; icon: string }[],
+): Promise<void> {
   for (const reward of rewards) {
     await addReward(familyId, reward);
   }
