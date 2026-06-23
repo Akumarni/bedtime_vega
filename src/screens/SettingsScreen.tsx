@@ -1,26 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TextInput,
   StyleSheet,
-  BackHandler,
 } from 'react-native';
+import { TVFocusGuideView } from '@amazon-devices/react-native-kepler';
 import { useFamilyContext } from '../context/FamilyContext';
 import FocusableButton from '../components/FocusableButton';
 import { avatarEmojis, colors, fontSize, spacing, borderRadius, commonStyles } from '../theme';
 
 export default function SettingsScreen() {
   const { nav, navigate, goBack } = useFamilyContext();
-
-  useEffect(() => {
-    const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-      goBack();
-      return true;
-    });
-    return () => handler.remove();
-  }, [goBack]);
 
   if (nav.screen === 'settings-children') return <ManageChildren />;
   if (nav.screen === 'settings-checklist') return <ManageChecklist />;
@@ -38,7 +30,7 @@ export default function SettingsScreen() {
         <Text style={styles.title}>Settings</Text>
       </View>
 
-      <View style={styles.menuList}>
+      <TVFocusGuideView style={styles.menuList}>
         <FocusableButton
           label="Manage Children"
           icon="👦"
@@ -46,6 +38,7 @@ export default function SettingsScreen() {
           size="lg"
           onPress={() => navigate('settings-children')}
           style={styles.menuItem}
+          hasTVPreferredFocus
         />
         <FocusableButton
           label="Manage Checklist Items"
@@ -63,7 +56,7 @@ export default function SettingsScreen() {
           onPress={() => navigate('settings-rewards')}
           style={styles.menuItem}
         />
-      </View>
+      </TVFocusGuideView>
     </View>
   );
 }
@@ -73,14 +66,6 @@ function ManageChildren() {
     useFamilyContext();
   const [newName, setNewName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(0);
-
-  useEffect(() => {
-    const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-      goBack();
-      return true;
-    });
-    return () => handler.remove();
-  }, [goBack]);
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
@@ -97,6 +82,7 @@ function ManageChildren() {
           variant="ghost"
           size="sm"
           onPress={goBack}
+          hasTVPreferredFocus
         />
         <Text style={styles.title}>Manage Children</Text>
       </View>
@@ -118,7 +104,7 @@ function ManageChildren() {
         {children.length < 4 && (
           <View style={styles.addSection}>
             <Text style={styles.addLabel}>Add a child</Text>
-            <View style={styles.avatarPicker}>
+            <TVFocusGuideView style={styles.avatarPicker}>
               {avatarEmojis.map((emoji, idx) => (
                 <FocusableButton
                   key={emoji}
@@ -129,7 +115,7 @@ function ManageChildren() {
                   style={styles.avatarOption}
                 />
               ))}
-            </View>
+            </TVFocusGuideView>
             <TextInput
               style={styles.input}
               value={newName}
@@ -153,22 +139,18 @@ function ManageChildren() {
 }
 
 function ManageChecklist() {
-  const { checklistItems, addNewChecklistItem, deleteChecklistItem, goBack } =
+  const { children, getChecklistForChild, addNewChecklistItem, deleteChecklistItem, goBack } =
     useFamilyContext();
+  const [selectedChild, setSelectedChild] = useState(0);
   const [newTitle, setNewTitle] = useState('');
   const [newIcon, setNewIcon] = useState('✅');
 
-  useEffect(() => {
-    const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-      goBack();
-      return true;
-    });
-    return () => handler.remove();
-  }, [goBack]);
+  const child = children[selectedChild];
+  const items = child ? getChecklistForChild(child.id) : [];
 
   const handleAdd = async () => {
-    if (!newTitle.trim()) return;
-    await addNewChecklistItem(newTitle.trim(), newIcon);
+    if (!newTitle.trim() || !child) return;
+    await addNewChecklistItem(child.id, newTitle.trim(), newIcon);
     setNewTitle('');
   };
 
@@ -180,12 +162,26 @@ function ManageChecklist() {
           variant="ghost"
           size="sm"
           onPress={goBack}
+          hasTVPreferredFocus
         />
         <Text style={styles.title}>Checklist Items</Text>
       </View>
 
+      <TVFocusGuideView style={styles.tabs}>
+        {children.map((c, idx) => (
+          <FocusableButton
+            key={c.id}
+            label={`${c.avatar} ${c.name}`}
+            variant={idx === selectedChild ? 'primary' : 'ghost'}
+            size="sm"
+            onPress={() => setSelectedChild(idx)}
+            style={{ marginRight: spacing.sm }}
+          />
+        ))}
+      </TVFocusGuideView>
+
       <ScrollView style={styles.content}>
-        {checklistItems.map((item) => (
+        {items.map((item) => (
           <View key={item.id} style={styles.itemRow}>
             <Text style={styles.itemIcon}>{item.icon}</Text>
             <Text style={styles.itemTitle}>{item.title}</Text>
@@ -193,7 +189,7 @@ function ManageChecklist() {
               label="Remove"
               variant="danger"
               size="sm"
-              onPress={() => deleteChecklistItem(item.id)}
+              onPress={() => child && deleteChecklistItem(child.id, item.id)}
             />
           </View>
         ))}
@@ -235,14 +231,6 @@ function ManageRewards() {
   const [newTitle, setNewTitle] = useState('');
   const [newIcon, setNewIcon] = useState('🎁');
 
-  useEffect(() => {
-    const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-      goBack();
-      return true;
-    });
-    return () => handler.remove();
-  }, [goBack]);
-
   const handleAdd = async () => {
     if (!newTitle.trim()) return;
     await addNewReward(newTitle.trim(), newIcon);
@@ -257,6 +245,7 @@ function ManageRewards() {
           variant="ghost"
           size="sm"
           onPress={goBack}
+          hasTVPreferredFocus
         />
         <Text style={styles.title}>Reward Items</Text>
       </View>
@@ -325,6 +314,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxxl,
   },
   menuItem: {
+    marginBottom: spacing.lg,
+  },
+  tabs: {
+    flexDirection: 'row',
     marginBottom: spacing.lg,
   },
   content: {

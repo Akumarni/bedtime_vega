@@ -39,7 +39,7 @@ export interface FamilyData {
   name: string;
   pin: string;
   children: Child[];
-  checklistItems: ChecklistItem[];
+  checklistItems: Record<string, ChecklistItem[]>;
   rewards: RewardItem[];
 }
 

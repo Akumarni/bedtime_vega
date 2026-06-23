@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Pressable, View, Text, StyleSheet, Animated } from 'react-native';
+import React, { useState } from 'react';
+import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, spacing, borderRadius } from '../theme';
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
   totalCount: number;
   isComplete: boolean;
   onPress: () => void;
+  hasTVPreferredFocus?: boolean;
 }
 
 export default function ChildProfile({
@@ -18,117 +19,76 @@ export default function ChildProfile({
   totalCount,
   isComplete,
   onPress,
+  hasTVPreferredFocus = false,
 }: Props) {
   const [focused, setFocused] = useState(false);
-  const scale = useRef(new Animated.Value(1)).current;
-  const glow = useRef(new Animated.Value(0)).current;
-
-  const handleFocus = useCallback(() => {
-    setFocused(true);
-    Animated.parallel([
-      Animated.spring(scale, {
-        toValue: 1.08,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-      Animated.timing(glow, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }, [scale, glow]);
-
-  const handleBlur = useCallback(() => {
-    setFocused(false);
-    Animated.parallel([
-      Animated.spring(scale, {
-        toValue: 1,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-      Animated.timing(glow, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }, [scale, glow]);
 
   const progressPercent =
     totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
-    <Animated.View style={[styles.wrapper, { transform: [{ scale }] }]}>
-      <Pressable
-        onPress={onPress}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        style={[
-          styles.card,
-          focused && styles.cardFocused,
-          isComplete && styles.cardComplete,
-        ]}>
-        <Text style={styles.avatar}>{avatar}</Text>
-        <Text style={styles.name}>{name}</Text>
+    <TouchableOpacity
+      onPress={onPress}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      activeOpacity={0.8}
+      hasTVPreferredFocus={hasTVPreferredFocus}
+      style={[
+        styles.card,
+        focused && styles.cardFocused,
+        isComplete && styles.cardComplete,
+      ]}>
+      <Text style={styles.avatar}>{avatar}</Text>
+      <Text style={styles.name}>{name}</Text>
 
-        <View style={styles.progressContainer}>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${progressPercent}%` },
-                isComplete && styles.progressComplete,
-              ]}
-            />
-          </View>
-          <Text style={styles.progressText}>
-            {isComplete
-              ? '✓ Done!'
-              : `${completedCount}/${totalCount}`}
-          </Text>
+      <View style={styles.progressContainer}>
+        <View style={styles.progressTrack}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${progressPercent}%` },
+              isComplete && styles.progressComplete,
+            ]}
+          />
         </View>
-      </Pressable>
-    </Animated.View>
+        <Text style={styles.progressText}>
+          {isComplete ? '✓ Done!' : `${completedCount}/${totalCount}`}
+        </Text>
+      </View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-    marginHorizontal: spacing.md,
-  },
   card: {
+    flex: 1,
     backgroundColor: colors.surface,
     borderRadius: borderRadius.xl,
     padding: spacing.xl,
     alignItems: 'center',
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: 'transparent',
-    minHeight: 220,
+    minHeight: 440,
     justifyContent: 'center',
+    marginHorizontal: spacing.md,
   },
   cardFocused: {
     borderColor: colors.focusRing,
     backgroundColor: colors.surfaceLight,
-    shadowColor: colors.focusGlow,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 10,
+    transform: [{ scale: 1.05 }],
   },
   cardComplete: {
     borderColor: colors.successDim,
   },
   avatar: {
-    fontSize: 64,
-    marginBottom: spacing.md,
+    fontSize: 120,
+    marginBottom: spacing.lg,
   },
   name: {
     fontSize: fontSize.lg,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   progressContainer: {
     width: '100%',
@@ -136,7 +96,7 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     width: '80%',
-    height: 8,
+    height: 16,
     backgroundColor: colors.surfaceHighlight,
     borderRadius: borderRadius.round,
     overflow: 'hidden',

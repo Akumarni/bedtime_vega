@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, BackHandler } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { TVFocusGuideView } from '@amazon-devices/react-native-kepler';
 import { useFamilyContext } from '../context/FamilyContext';
 import ChecklistItemRow from '../components/ChecklistItemRow';
 import ProgressBar from '../components/ProgressBar';
@@ -10,14 +11,15 @@ export default function ChecklistScreen() {
   const {
     nav,
     children,
-    checklistItems,
     tonight,
     toggleItem,
     navigate,
     goBack,
     getChildProgress,
+    getChecklistForChild,
   } = useFamilyContext();
 
+  const checklistItems = nav.childId ? getChecklistForChild(nav.childId) : [];
   const child = children.find((c) => c.id === nav.childId);
   const childTonight = nav.childId ? tonight[nav.childId] : undefined;
   const progress = nav.childId
@@ -26,14 +28,6 @@ export default function ChecklistScreen() {
 
   const allDone =
     progress.completed >= progress.total && progress.total > 0;
-
-  useEffect(() => {
-    const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-      goBack();
-      return true;
-    });
-    return () => handler.remove();
-  }, [goBack]);
 
   useEffect(() => {
     if (allDone && nav.childId && !childTonight?.allComplete) {
@@ -57,7 +51,7 @@ export default function ChecklistScreen() {
     return (
       <View style={[commonStyles.screenContainer, commonStyles.center]}>
         <Text style={commonStyles.title}>Child not found</Text>
-        <FocusableButton label="Go Back" onPress={goBack} />
+        <FocusableButton label="Go Back" onPress={goBack} hasTVPreferredFocus />
       </View>
     );
   }
@@ -94,21 +88,21 @@ export default function ChecklistScreen() {
         </View>
       )}
 
-      <ScrollView
-        style={styles.list}
-        contentContainerStyle={styles.listContent}>
-        {checklistItems.map((item) => {
-          const isChecked = childTonight?.items?.[item.id] ?? false;
-          return (
-            <ChecklistItemRow
-              key={item.id}
-              title={item.title}
-              icon={item.icon}
-              isChecked={isChecked}
-              onToggle={() => handleToggle(item.id)}
-            />
-          );
-        })}
+      <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+        <TVFocusGuideView>
+          {checklistItems.map((item, idx) => {
+            const isChecked = childTonight?.items?.[item.id] ?? false;
+            return (
+              <ChecklistItemRow
+                key={item.id}
+                title={item.title}
+                icon={item.icon}
+                isChecked={isChecked}
+                onToggle={() => handleToggle(item.id)}
+              />
+            );
+          })}
+        </TVFocusGuideView>
       </ScrollView>
     </View>
   );
@@ -127,7 +121,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.lg,
   },
   avatar: {
-    fontSize: 40,
+    fontSize: 80,
     marginRight: spacing.md,
   },
   childName: {
@@ -136,16 +130,16 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   progressWrapper: {
-    width: 200,
+    width: 300,
     marginLeft: spacing.lg,
   },
   completeBanner: {
     backgroundColor: colors.surfaceHighlight,
-    borderRadius: 16,
+    borderRadius: borderRadius.lg,
     padding: spacing.lg,
     alignItems: 'center',
     marginBottom: spacing.lg,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.success,
   },
   completeText: {

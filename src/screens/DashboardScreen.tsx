@@ -1,12 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  BackHandler,
-  Pressable,
-} from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { TVFocusGuideView } from '@amazon-devices/react-native-kepler';
 import { useFamilyContext } from '../context/FamilyContext';
 import FocusableButton from '../components/FocusableButton';
 import { colors, fontSize, spacing, borderRadius, commonStyles } from '../theme';
@@ -14,14 +8,6 @@ import { colors, fontSize, spacing, borderRadius, commonStyles } from '../theme'
 export default function DashboardScreen() {
   const { children, history, goBack } = useFamilyContext();
   const [selectedChild, setSelectedChild] = useState(0);
-
-  useEffect(() => {
-    const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-      goBack();
-      return true;
-    });
-    return () => handler.remove();
-  }, [goBack]);
 
   const child = children[selectedChild];
   const childHistory = child ? history[child.id] || [] : [];
@@ -49,11 +35,12 @@ export default function DashboardScreen() {
         <Text style={styles.title}>Dashboard</Text>
       </View>
 
-      <View style={styles.tabs}>
+      <TVFocusGuideView style={styles.tabs}>
         {children.map((c, idx) => (
-          <Pressable
+          <TouchableOpacity
             key={c.id}
             onPress={() => setSelectedChild(idx)}
+            activeOpacity={0.8}
             style={[
               styles.tab,
               idx === selectedChild && styles.tabActive,
@@ -66,9 +53,9 @@ export default function DashboardScreen() {
               ]}>
               {c.name}
             </Text>
-          </Pressable>
+          </TouchableOpacity>
         ))}
-      </View>
+      </TVFocusGuideView>
 
       {child && (
         <ScrollView style={styles.content}>
@@ -98,28 +85,11 @@ export default function DashboardScreen() {
             </View>
           )}
 
-          {childHistory.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Recent Nights</Text>
-              {childHistory.slice(0, 14).map((entry) => (
-                <View key={entry.id} style={styles.historyRow}>
-                  <Text style={styles.historyDate}>{formatDate(entry.date)}</Text>
-                  <Text style={styles.historyReward}>
-                    {entry.rewardIcon} {entry.rewardTitle}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-
           {childHistory.length === 0 && (
             <View style={[commonStyles.center, { paddingVertical: spacing.xxxl }]}>
-              <Text style={{ fontSize: 64 }}>🌙</Text>
+              <Text style={{ fontSize: 120 }}>🌙</Text>
               <Text style={styles.emptyText}>
                 No bedtime history yet for {child.name}
-              </Text>
-              <Text style={styles.emptySubtext}>
-                Complete tonight's checklist to get started!
               </Text>
             </View>
           )}
@@ -131,43 +101,21 @@ export default function DashboardScreen() {
 
 function computeStreak(dates: string[]): number {
   if (dates.length === 0) return 0;
-
   const uniqueDates = [...new Set(dates)].sort().reverse();
   let streak = 0;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
   for (let i = 0; i < uniqueDates.length; i++) {
     const expected = new Date(today);
     expected.setDate(expected.getDate() - i);
     const expectedKey = expected.toISOString().split('T')[0];
-
     if (uniqueDates[i] === expectedKey) {
       streak++;
     } else {
       break;
     }
   }
-
   return streak;
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T12:00:00');
-  const today = new Date();
-  today.setHours(12, 0, 0, 0);
-  const diff = Math.round(
-    (today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (diff === 0) return 'Tonight';
-  if (diff === 1) return 'Last night';
-  if (diff < 7)
-    return date.toLocaleDateString('en-US', { weekday: 'long' });
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
 }
 
 const styles = StyleSheet.create({
@@ -194,7 +142,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     marginRight: spacing.md,
-    borderWidth: 2,
+    borderWidth: 4,
     borderColor: 'transparent',
   },
   tabActive: {
@@ -202,7 +150,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceLight,
   },
   tabAvatar: {
-    fontSize: 28,
+    fontSize: 56,
     marginRight: spacing.sm,
   },
   tabName: {
@@ -256,7 +204,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   rewardIcon: {
-    fontSize: 28,
+    fontSize: 56,
     marginRight: spacing.md,
   },
   rewardTitle: {
@@ -269,34 +217,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.accent,
   },
-  historyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  historyDate: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    width: 120,
-  },
-  historyReward: {
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
-    flex: 1,
-    textAlign: 'right',
-  },
   emptyText: {
     fontSize: fontSize.lg,
     color: colors.textSecondary,
     marginTop: spacing.lg,
-  },
-  emptySubtext: {
-    fontSize: fontSize.md,
-    color: colors.textMuted,
-    marginTop: spacing.sm,
   },
 });

@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, spacing, borderRadius } from '../theme';
 
 interface Props {
@@ -13,33 +13,18 @@ export default function ProgressBar({
   completed,
   total,
   showLabel = true,
-  height = 12,
+  height = 16,
 }: Props) {
-  const animatedWidth = useRef(new Animated.Value(0)).current;
   const percent = total > 0 ? (completed / total) * 100 : 0;
   const allDone = completed >= total && total > 0;
-
-  useEffect(() => {
-    Animated.timing(animatedWidth, {
-      toValue: percent,
-      duration: 500,
-      useNativeDriver: false,
-    }).start();
-  }, [percent, animatedWidth]);
-
-  const width = animatedWidth.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0%', '100%'],
-    extrapolate: 'clamp',
-  });
 
   return (
     <View style={styles.container}>
       <View style={[styles.track, { height }]}>
-        <Animated.View
+        <View
           style={[
             styles.fill,
-            { width, height },
+            { width: `${percent}%`, height },
             allDone && styles.fillComplete,
           ]}
         />

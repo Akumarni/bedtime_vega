@@ -1,11 +1,10 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  Pressable,
+  TouchableOpacity,
   Text,
   StyleSheet,
   ViewStyle,
   TextStyle,
-  Animated,
 } from 'react-native';
 import { colors, fontSize, borderRadius, spacing } from '../theme';
 
@@ -17,6 +16,7 @@ interface Props {
   size?: 'sm' | 'md' | 'lg';
   style?: ViewStyle;
   disabled?: boolean;
+  hasTVPreferredFocus?: boolean;
 }
 
 export default function FocusableButton({
@@ -27,60 +27,42 @@ export default function FocusableButton({
   size = 'md',
   style,
   disabled = false,
+  hasTVPreferredFocus = false,
 }: Props) {
   const [focused, setFocused] = useState(false);
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const handleFocus = useCallback(() => {
-    setFocused(true);
-    Animated.spring(scale, {
-      toValue: 1.05,
-      friction: 8,
-      useNativeDriver: true,
-    }).start();
-  }, [scale]);
-
-  const handleBlur = useCallback(() => {
-    setFocused(false);
-    Animated.spring(scale, {
-      toValue: 1,
-      friction: 8,
-      useNativeDriver: true,
-    }).start();
-  }, [scale]);
 
   const variantStyle = variantStyles[variant];
   const sizeStyle = sizeStyles[size];
 
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <Pressable
-        onPress={disabled ? undefined : onPress}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
+    <TouchableOpacity
+      onPress={disabled ? undefined : onPress}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      activeOpacity={0.8}
+      hasTVPreferredFocus={hasTVPreferredFocus}
+      style={[
+        styles.base,
+        variantStyle.container,
+        sizeStyle.container,
+        focused && styles.focused,
+        focused && variantStyle.focused,
+        disabled && styles.disabled,
+        style,
+      ]}>
+      {icon ? (
+        <Text style={[styles.icon, sizeStyle.icon]}>{icon}</Text>
+      ) : null}
+      <Text
         style={[
-          styles.base,
-          variantStyle.container,
-          sizeStyle.container,
-          focused && styles.focused,
-          focused && variantStyle.focused,
-          disabled && styles.disabled,
-          style,
+          styles.label,
+          variantStyle.label,
+          sizeStyle.label,
+          disabled && styles.disabledText,
         ]}>
-        {icon ? (
-          <Text style={[styles.icon, sizeStyle.icon]}>{icon}</Text>
-        ) : null}
-        <Text
-          style={[
-            styles.label,
-            variantStyle.label,
-            sizeStyle.label,
-            disabled && styles.disabledText,
-          ]}>
-          {label}
-        </Text>
-      </Pressable>
-    </Animated.View>
+        {label}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
@@ -90,16 +72,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.md,
-    borderWidth: 2,
+    borderWidth: 4,
     borderColor: 'transparent',
   },
   focused: {
     borderColor: colors.focusRing,
-    shadowColor: colors.focusGlow,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 8,
+    transform: [{ scale: 1.05 }],
   },
   label: {
     fontWeight: '600',
@@ -145,17 +123,17 @@ const variantStyles = {
 
 const sizeStyles = {
   sm: StyleSheet.create({
-    container: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+    container: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
     label: { fontSize: fontSize.sm } as TextStyle,
     icon: { fontSize: fontSize.sm } as TextStyle,
   }),
   md: StyleSheet.create({
-    container: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+    container: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg },
     label: { fontSize: fontSize.md } as TextStyle,
     icon: { fontSize: fontSize.md } as TextStyle,
   }),
   lg: StyleSheet.create({
-    container: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg },
+    container: { paddingHorizontal: spacing.xxl, paddingVertical: spacing.xl },
     label: { fontSize: fontSize.lg } as TextStyle,
     icon: { fontSize: fontSize.lg } as TextStyle,
   }),

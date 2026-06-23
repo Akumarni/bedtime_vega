@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, BackHandler } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { TVFocusGuideView } from '@amazon-devices/react-native-kepler';
 import { useFamilyContext } from '../context/FamilyContext';
 import RewardWheel from '../components/RewardWheel';
 import FocusableButton from '../components/FocusableButton';
@@ -12,19 +13,9 @@ export default function RewardWheelScreen() {
 
   const child = children.find((c) => c.id === nav.childId);
   const [landed, setLanded] = useState(false);
-  const [wonReward, setWonReward] = useState<RewardItem | null>(null);
-
-  useEffect(() => {
-    const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-      goBack();
-      return true;
-    });
-    return () => handler.remove();
-  }, [goBack]);
 
   const handleComplete = useCallback(
     async (reward: RewardItem) => {
-      setWonReward(reward);
       setLanded(true);
       if (nav.childId) {
         await completeChild(nav.childId, reward.title, reward.icon);
@@ -37,7 +28,7 @@ export default function RewardWheelScreen() {
     return (
       <View style={[commonStyles.screenContainer, commonStyles.center]}>
         <Text style={commonStyles.title}>Something went wrong</Text>
-        <FocusableButton label="Go Home" onPress={goBack} />
+        <FocusableButton label="Go Home" onPress={goBack} hasTVPreferredFocus />
       </View>
     );
   }
@@ -58,13 +49,14 @@ export default function RewardWheelScreen() {
       </View>
 
       {landed && (
-        <View style={styles.actions}>
+        <TVFocusGuideView style={styles.actions}>
           <FocusableButton
             label="Back to Home"
             icon="🏠"
             variant="primary"
             size="lg"
             onPress={() => navigate('home')}
+            hasTVPreferredFocus
           />
           <FocusableButton
             label="View Dashboard"
@@ -74,7 +66,7 @@ export default function RewardWheelScreen() {
             onPress={() => navigate('dashboard', child.id)}
             style={{ marginLeft: spacing.lg }}
           />
-        </View>
+        </TVFocusGuideView>
       )}
     </View>
   );
@@ -101,7 +93,7 @@ const styles = StyleSheet.create({
   wheelContainer: {
     flex: 1,
     justifyContent: 'center',
-    maxHeight: 560,
+    maxHeight: 900,
   },
   actions: {
     flexDirection: 'row',

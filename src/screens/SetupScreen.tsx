@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { TVFocusGuideView } from '@amazon-devices/react-native-kepler';
 import { useFamilyContext } from '../context/FamilyContext';
 import FocusableButton from '../components/FocusableButton';
 import { colors, fontSize, spacing, borderRadius, commonStyles } from '../theme';
@@ -53,6 +54,7 @@ export default function SetupScreen() {
           size="lg"
           onPress={() => setStep('family-name')}
           style={{ marginTop: spacing.xxl }}
+          hasTVPreferredFocus
         />
       </View>
     );
@@ -77,6 +79,7 @@ export default function SetupScreen() {
           onPress={() => setStep('children')}
           disabled={!familyName.trim()}
           style={{ marginTop: spacing.xl }}
+          hasTVPreferredFocus
         />
       </View>
     );
@@ -119,7 +122,7 @@ export default function SetupScreen() {
           />
         )}
 
-        <View style={styles.navButtons}>
+        <TVFocusGuideView style={styles.navButtons}>
           <FocusableButton
             label="← Back"
             variant="ghost"
@@ -132,8 +135,9 @@ export default function SetupScreen() {
             size="lg"
             onPress={() => setStep('pin')}
             disabled={!childNames.some((n) => n.trim())}
+            hasTVPreferredFocus
           />
-        </View>
+        </TVFocusGuideView>
       </View>
     );
   }
@@ -154,7 +158,7 @@ export default function SetupScreen() {
         maxLength={4}
       />
 
-      <View style={styles.navButtons}>
+      <TVFocusGuideView style={styles.navButtons}>
         <FocusableButton
           label="← Back"
           variant="ghost"
@@ -167,8 +171,9 @@ export default function SetupScreen() {
           size="lg"
           onPress={handleFinish}
           disabled={pin.length < 4 || isCreating}
+          hasTVPreferredFocus
         />
-      </View>
+      </TVFocusGuideView>
     </View>
   );
 }

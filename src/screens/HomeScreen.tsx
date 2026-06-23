@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { TVFocusGuideView } from '@amazon-devices/react-native-kepler';
 import { useFamilyContext } from '../context/FamilyContext';
 import ChildProfile from '../components/ChildProfile';
 import FocusableButton from '../components/FocusableButton';
@@ -11,7 +12,6 @@ export default function HomeScreen() {
     familyName,
     children,
     tonight,
-    checklistItems,
     navigate,
     getChildProgress,
   } = useFamilyContext();
@@ -23,7 +23,7 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>Good evening</Text>
           <Text style={styles.familyName}>{familyName} Family</Text>
         </View>
-        <View style={styles.headerButtons}>
+        <TVFocusGuideView style={styles.headerButtons}>
           <FocusableButton
             label="Dashboard"
             icon="📊"
@@ -39,13 +39,13 @@ export default function HomeScreen() {
             onPress={() => navigate('settings')}
             style={{ marginLeft: spacing.md }}
           />
-        </View>
+        </TVFocusGuideView>
       </View>
 
       <Text style={styles.prompt}>Who's ready for bed? 🌙</Text>
 
-      <View style={styles.childrenRow}>
-        {children.map((child) => {
+      <TVFocusGuideView style={styles.childrenRow}>
+        {children.map((child, idx) => {
           const progress = getChildProgress(child.id);
           const childTonight = tonight[child.id];
           const isComplete = childTonight?.allComplete ?? false;
@@ -58,6 +58,7 @@ export default function HomeScreen() {
               completedCount={progress.completed}
               totalCount={progress.total}
               isComplete={isComplete}
+              hasTVPreferredFocus={idx === 0}
               onPress={() => {
                 if (isComplete) {
                   navigate('dashboard', child.id);
@@ -68,7 +69,7 @@ export default function HomeScreen() {
             />
           );
         })}
-      </View>
+      </TVFocusGuideView>
 
       <View style={styles.footer}>
         <Text style={styles.familyCode}>Family Code: {familyId}</Text>
@@ -120,7 +121,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   familyCode: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.textMuted,
     fontWeight: '600',
     letterSpacing: 2,

@@ -43,13 +43,13 @@ export const spacing = {
 };
 
 export const fontSize = {
-  xs: 14,
-  sm: 18,
-  md: 22,
-  lg: 28,
-  xl: 36,
-  xxl: 48,
-  hero: 64,
+  xs: 28,
+  sm: 36,
+  md: 44,
+  lg: 56,
+  xl: 72,
+  xxl: 96,
+  hero: 128,
 };
 
 export const borderRadius = {
