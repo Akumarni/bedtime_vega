@@ -7,5 +7,9 @@ build/
 *.log
 .env
 .env.local
+.env.production
+src/firebase/.env
+web-companion/.env
+web-companion/.env.production
 web-companion/node_modules/
 web-companion/dist/

@@ -1,0 +1,44 @@
+{
+  "rules": {
+    "families": {
+      "$familyId": {
+        ".read": true,
+        ".write": true,
+        "info": {
+          ".validate": "newData.hasChildren(['name', 'pin'])"
+        },
+        "children": {
+          "$childId": {
+            ".validate": "newData.hasChildren(['name', 'avatar', 'order'])"
+          }
+        },
+        "checklistItems": {
+          "$itemId": {
+            ".validate": "newData.hasChildren(['title', 'icon', 'order'])"
+          }
+        },
+        "rewards": {
+          "$rewardId": {
+            ".validate": "newData.hasChildren(['title', 'icon'])"
+          }
+        }
+      }
+    },
+    "tonight": {
+      "$familyId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "history": {
+      "$familyId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "$other": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}
