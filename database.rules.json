@@ -9,17 +9,20 @@
         },
         "children": {
           "$childId": {
-            ".validate": "newData.hasChildren(['name', 'avatar', 'order'])",
+            ".validate": "newData.hasChild('name') && newData.hasChild('avatar') && newData.hasChild('order')",
             "checklistItems": {
               "$itemId": {
                 ".validate": "newData.hasChildren(['title', 'icon', 'order'])"
               }
+            },
+            "rewards": {
+              "$rewardId": {
+                ".validate": "newData.hasChildren(['title', 'icon'])"
+              }
+            },
+            "timerMinutes": {
+              ".validate": "newData.isNumber() && newData.val() >= 5 && newData.val() <= 60"
             }
-          }
-        },
-        "rewards": {
-          "$rewardId": {
-            ".validate": "newData.hasChildren(['title', 'icon'])"
           }
         }
       }
@@ -27,19 +30,49 @@
     "tonight": {
       "$familyId": {
         ".read": true,
-        ".write": true
+        ".write": true,
+        "$dateKey": {
+          "$childId": {
+            "items": {
+              "$itemId": {
+                ".validate": "newData.isBoolean()"
+              }
+            },
+            "allComplete": {
+              ".validate": "newData.isBoolean()"
+            },
+            "completedAt": {
+              ".validate": "newData.isNumber()"
+            },
+            "timerStartedAt": {
+              ".validate": "newData.isNumber()"
+            },
+            "rewardWon": {
+              ".validate": "newData.isString()"
+            },
+            "rewardIcon": {
+              ".validate": "newData.isString()"
+            }
+          }
+        }
       }
     },
     "history": {
       "$familyId": {
         ".read": true,
-        ".write": true
+        ".write": true,
+        "$childId": {
+          "$entryId": {
+            ".validate": "newData.hasChildren(['date', 'rewardTitle', 'rewardIcon', 'timestamp'])"
+          }
+        }
       }
     },
     "devices": {
       "$deviceId": {
         ".read": true,
-        ".write": true
+        ".write": true,
+        ".validate": "newData.hasChild('familyId')"
       }
     },
     "$other": {
