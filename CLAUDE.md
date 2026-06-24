@@ -141,10 +141,13 @@ cd web-companion && npm run build && firebase deploy --only hosting
 
 ## Firebase Database Rules
 
-Rules are at `database.rules.json`. Need updating:
-- Rewards moved from `families/{familyId}/rewards/` to `families/{familyId}/children/{childId}/rewards/` — old rewards validation rule is stale
-- `timerMinutes` field added to children — no validation rule yet
-- `timerStartedAt` field added to tonight progress — no validation rule yet
+Rules are at `database.rules.json`. Updated with:
+- Per-child rewards validation at `families/{familyId}/children/{childId}/rewards/`
+- `timerMinutes` validated as number 5-60 on children
+- `timerStartedAt` validated as number on tonight progress
+- History entries validated with required fields (date, rewardTitle, rewardIcon, timestamp)
+- Device config validated with required familyId field
+- Tonight progress items validated as booleans
 
 ## Status
 
@@ -155,24 +158,27 @@ Rules are at `database.rules.json`. Need updating:
 - [x] Back button on remote navigates within app (doesn't exit)
 - [x] Per-child checklists, rewards, and timers
 - [x] PIN-protected settings
-- [x] Reset Tonight per child (clears progress + removes history entry)
-- [x] Reward wheel with manual spin trigger and glassmorphic selector
-- [x] Dashboard with streak, completion time, tonight's reward
-- [x] QR code pairing for companion app (pre-fills family code)
+- [x] Reset Tonight per child (PIN-protected, clears progress + history entry for re-do, only 1 completion tracked per night)
+- [x] Reward wheel with manual spin trigger and glassmorphic selector frame (transparent glass border, no solid overlay)
+- [x] Dashboard with streak, completion time, tonight's reward, reward history
+- [x] QR code on home screen for quick companion app pairing (pre-fills family code, user only enters PIN)
 - [x] Companion web app updated for per-child data + QR pre-fill + timer config
 - [x] Companion web app deployed to Firebase Hosting
-- [x] Custom app icon (320x180 banner) showing on Fire TV home screen
+- [x] Custom app icon (320x180 banner with moon/stars/checklist design)
 - [x] Production UI polish pass — modern color palette, refined typography, clean card designs
 - [x] Git repo synced to GitHub with SSH auth from Kali laptop
 - [x] Test family data cleaned out of Firebase
+- [x] Firebase database rules updated — per-child rewards, timerMinutes, tonight progress fields, history entries all validated
+- [x] Companion web app polished to match TV app's deep space palette (Inter font, gradient bg, refined cards)
+- [x] Companion web app: inline editing of checklist items, rewards, and child names (tap to edit)
+- [x] Companion web app: reorder buttons (up/down arrows) for checklist items
+- [x] Companion web app: history page with stats — streak, this week/month/all-time counts, most earned reward
+- [x] TV app: show one checklist item at a time (completed items as compact chips, step counter, "up next" hint)
 
 ### POSSIBLE NEXT STEPS
-- [ ] Update Firebase database rules for per-child rewards path and new fields
 - [ ] End-to-end testing with real family data over multiple nights
-- [ ] Polish companion web app UI to match TV app design refresh
+- [ ] Build and deploy TV app with one-at-a-time checklist (needs build on Kali laptop)
 - [ ] Add sound effects (checklist item check, reward wheel spin, completion celebration)
-- [ ] Add ability to reorder checklist items (drag or up/down buttons)
-- [ ] Add ability to edit existing checklist item/reward names (currently can only add/remove)
 - [ ] Add weekly/monthly stats to dashboard (average completion time, best streak)
 - [ ] Add multiple device support (e.g., tablet in kid's room + TV in living room)
 - [ ] Investigate app store submission requirements for Vega/Fire TV
