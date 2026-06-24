@@ -29,6 +29,7 @@ export interface Child {
   name: string;
   avatar: string;
   order: number;
+  timerMinutes: number;
 }
 
 export interface ChecklistItem {
