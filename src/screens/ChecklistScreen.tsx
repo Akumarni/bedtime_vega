@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { TVFocusGuideView } from '@amazon-devices/react-native-kepler';
 import { useFamilyContext } from '../context/FamilyContext';
 import ChecklistItemRow from '../components/ChecklistItemRow';
@@ -36,6 +36,15 @@ export default function ChecklistScreen() {
 
   const allDone =
     progress.completed >= progress.total && progress.total > 0;
+
+  const completedItems = checklistItems.filter(
+    (item) => childTonight?.items?.[item.id] === true,
+  );
+  const uncheckedItems = checklistItems.filter(
+    (item) => !(childTonight?.items?.[item.id] === true),
+  );
+  const currentItem = uncheckedItems[0] || null;
+  const nextItem = uncheckedItems[1] || null;
 
   const timerMinutes = child?.timerMinutes ?? 15;
   const timerStartedAt = childTonight?.timerStartedAt ?? null;
@@ -138,23 +147,40 @@ export default function ChecklistScreen() {
         </View>
       )}
 
-      <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-        <TVFocusGuideView>
-          {checklistItems.map((item, idx) => {
-            const isChecked = childTonight?.items?.[item.id] ?? false;
-            return (
-              <ChecklistItemRow
-                key={item.id}
-                title={item.title}
-                icon={item.icon}
-                isChecked={isChecked}
-                onToggle={() => handleToggle(item.id)}
-                hasTVPreferredFocus={idx === 0}
-              />
-            );
-          })}
-        </TVFocusGuideView>
-      </ScrollView>
+      {completedItems.length > 0 && (
+        <View style={styles.completedSection}>
+          {completedItems.map((item) => (
+            <View key={item.id} style={styles.completedChip}>
+              <Text style={styles.completedCheckmark}>✓</Text>
+              <Text style={styles.completedIcon}>{item.icon}</Text>
+              <Text style={styles.completedTitle}>{item.title}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {currentItem && !allDone && (
+        <View style={styles.currentItemContainer}>
+          <Text style={styles.stepLabel}>
+            Step {progress.completed + 1} of {progress.total}
+          </Text>
+          <TVFocusGuideView>
+            <ChecklistItemRow
+              key={currentItem.id}
+              title={currentItem.title}
+              icon={currentItem.icon}
+              isChecked={false}
+              onToggle={() => handleToggle(currentItem.id)}
+              hasTVPreferredFocus
+            />
+          </TVFocusGuideView>
+          {nextItem && (
+            <Text style={styles.upNextText}>
+              Up next: {nextItem.icon} {nextItem.title}
+            </Text>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -248,10 +274,54 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
-  list: {
-    flex: 1,
+  completedSection: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
   },
-  listContent: {
-    paddingBottom: spacing.xxl,
+  completedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    ...rounded('round'),
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.successDim,
+  },
+  completedCheckmark: {
+    fontSize: fontSize.xs,
+    color: colors.success,
+    fontWeight: '800',
+    marginRight: spacing.xs,
+  },
+  completedIcon: {
+    fontSize: 24,
+    marginRight: spacing.xs,
+  },
+  completedTitle: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: '500',
+  },
+  currentItemContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  stepLabel: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  upNextText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.xl,
+    fontWeight: '500',
   },
 });
