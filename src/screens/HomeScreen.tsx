@@ -4,7 +4,8 @@ import { TVFocusGuideView } from '@amazon-devices/react-native-kepler';
 import { useFamilyContext } from '../context/FamilyContext';
 import ChildProfile from '../components/ChildProfile';
 import FocusableButton from '../components/FocusableButton';
-import { colors, fontSize, spacing, commonStyles } from '../theme';
+import QRCode from '../components/QRCode';
+import { colors, fontSize, spacing, rounded, commonStyles } from '../theme';
 
 export default function HomeScreen() {
   const {
@@ -36,13 +37,13 @@ export default function HomeScreen() {
             icon="⚙️"
             variant="ghost"
             size="sm"
-            onPress={() => navigate('settings')}
-            style={{ marginLeft: spacing.md }}
+            onPress={() => navigate('settings-pin')}
+            style={styles.headerBtnSpace}
           />
         </TVFocusGuideView>
       </View>
 
-      <Text style={styles.prompt}>Who's ready for bed? 🌙</Text>
+      <Text style={styles.prompt}>Who's ready for bed?</Text>
 
       <TVFocusGuideView style={styles.childrenRow}>
         {children.map((child, idx) => {
@@ -72,10 +73,20 @@ export default function HomeScreen() {
       </TVFocusGuideView>
 
       <View style={styles.footer}>
-        <Text style={styles.familyCode}>Family Code: {familyId}</Text>
-        <Text style={styles.familyCodeHint}>
-          Enter this code on your phone to manage settings
-        </Text>
+        <View style={styles.qrContainer}>
+          {familyId && (
+            <QRCode
+              value={`https://bedtime.jg-it.net?code=${familyId}`}
+              size={120}
+              color="#FFFFFF"
+              bgColor={colors.surface}
+            />
+          )}
+          <View style={styles.qrTextBlock}>
+            <Text style={styles.familyCodeHint}>Scan to manage on your phone</Text>
+            <Text style={styles.familyCode}>{familyId}</Text>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -86,49 +97,64 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   headerButtons: {
     flexDirection: 'row',
   },
+  headerBtnSpace: {
+    marginLeft: spacing.sm,
+  },
   greeting: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
     color: colors.textSecondary,
     fontWeight: '500',
   },
   familyName: {
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xl,
     fontWeight: '800',
     color: colors.textPrimary,
     marginTop: spacing.xs,
   },
   prompt: {
-    fontSize: fontSize.xl,
+    fontSize: fontSize.lg,
     fontWeight: '600',
     color: colors.primaryLight,
     textAlign: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xl,
   },
   childrenRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: spacing.xl,
   },
   footer: {
     alignItems: 'center',
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
   },
-  familyCode: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    fontWeight: '600',
-    letterSpacing: 2,
+  qrContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    ...rounded('lg'),
+    paddingRight: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  qrTextBlock: {
+    marginLeft: spacing.md,
   },
   familyCodeHint: {
     fontSize: fontSize.xs,
-    color: colors.textMuted,
+    color: colors.textSecondary,
+  },
+  familyCode: {
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    color: colors.primaryLight,
+    letterSpacing: 3,
     marginTop: spacing.xs,
   },
 });

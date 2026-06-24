@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { colors, fontSize, spacing, borderRadius } from '../theme';
+import { colors, fontSize, spacing, rounded } from '../theme';
 import { RewardItem } from '../types';
 
-const ITEM_HEIGHT = 160;
+const ITEM_HEIGHT = 110;
 const VISIBLE_ITEMS = 5;
 const VIEWPORT_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
-const SPIN_CYCLES = 6;
+const SPIN_CYCLES = 4;
+const CENTER_SLOT = Math.floor(VISIBLE_ITEMS / 2);
 
 interface Props {
   rewards: RewardItem[];
@@ -22,7 +23,7 @@ export default function RewardWheel({ rewards, onComplete }: Props) {
 
   const extendedRewards = React.useMemo(() => {
     if (rewards.length === 0) return [];
-    const totalCycles = SPIN_CYCLES + 2;
+    const totalCycles = SPIN_CYCLES + 3;
     const extended: (RewardItem & { key: string })[] = [];
     for (let cycle = 0; cycle < totalCycles; cycle++) {
       for (let i = 0; i < rewards.length; i++) {
@@ -38,29 +39,29 @@ export default function RewardWheel({ rewards, onComplete }: Props) {
     const winner = Math.floor(Math.random() * rewards.length);
     setWinnerIndex(winner);
 
-    const centerOffset = Math.floor(VISIBLE_ITEMS / 2);
     const targetIndex = SPIN_CYCLES * rewards.length + winner;
-    const targetY = (targetIndex - centerOffset) * ITEM_HEIGHT;
+    const targetY = (targetIndex - CENTER_SLOT) * ITEM_HEIGHT;
 
-    const steps = 60;
+    const totalSteps = 80;
     let step = 0;
 
     const timer = setInterval(() => {
       step++;
-      const progress = step / steps;
-      const eased = 1 - Math.pow(1 - progress, 3);
+      const progress = step / totalSteps;
+      const eased = 1 - Math.pow(1 - progress, 4);
       const y = eased * targetY;
 
       scrollRef.current?.scrollTo({ y, animated: false });
 
-      if (step >= steps) {
+      if (step >= totalSteps) {
         clearInterval(timer);
+        scrollRef.current?.scrollTo({ y: targetY, animated: false });
         setHasLanded(true);
         setTimeout(() => {
           onCompleteRef.current(rewards[winner]);
-        }, 1500);
+        }, 2000);
       }
-    }, 75);
+    }, 60);
 
     return () => clearInterval(timer);
   }, [rewards]);
@@ -76,8 +77,6 @@ export default function RewardWheel({ rewards, onComplete }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.viewport}>
-        <View style={styles.centerHighlight} />
-
         <ScrollView
           ref={scrollRef}
           style={styles.scrollContainer}
@@ -108,6 +107,10 @@ export default function RewardWheel({ rewards, onComplete }: Props) {
             );
           })}
         </ScrollView>
+
+        <View style={styles.glowFar} pointerEvents="none" />
+        <View style={styles.glowMid} pointerEvents="none" />
+        <View style={styles.glassFrame} pointerEvents="none" />
       </View>
 
       {hasLanded && winnerIndex !== null && (
@@ -131,45 +134,70 @@ const styles = StyleSheet.create({
   },
   viewport: {
     height: VIEWPORT_HEIGHT,
-    width: 800,
+    width: 700,
     overflow: 'hidden',
-    borderRadius: borderRadius.xl,
+    ...rounded('xl'),
     backgroundColor: colors.surface,
-    borderWidth: 4,
+    borderWidth: 1,
     borderColor: colors.border,
-    position: 'relative',
   },
   scrollContainer: {
     flex: 1,
   },
-  centerHighlight: {
+  glowFar: {
     position: 'absolute',
-    top: ITEM_HEIGHT * Math.floor(VISIBLE_ITEMS / 2),
-    left: 0,
-    right: 0,
+    top: CENTER_SLOT * ITEM_HEIGHT - 10,
+    left: -1,
+    right: -1,
+    height: ITEM_HEIGHT + 20,
+    backgroundColor: 'transparent',
+    borderTopWidth: 3,
+    borderBottomWidth: 3,
+    borderColor: '#2E2510',
+    zIndex: 2,
+  },
+  glowMid: {
+    position: 'absolute',
+    top: CENTER_SLOT * ITEM_HEIGHT - 5,
+    left: -1,
+    right: -1,
+    height: ITEM_HEIGHT + 10,
+    backgroundColor: 'transparent',
+    borderTopWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: '#6B5525',
+    zIndex: 2,
+  },
+  glassFrame: {
+    position: 'absolute',
+    top: CENTER_SLOT * ITEM_HEIGHT,
+    left: -1,
+    right: -1,
     height: ITEM_HEIGHT,
-    backgroundColor: colors.surfaceHighlight,
-    borderTopWidth: 4,
-    borderBottomWidth: 4,
+    backgroundColor: 'transparent',
+    borderTopWidth: 3,
+    borderBottomWidth: 3,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
     borderColor: colors.accent,
-    zIndex: 1,
+    zIndex: 2,
   },
   rewardRow: {
     height: ITEM_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: spacing.xl,
   },
   rewardRowWinner: {
-    backgroundColor: 'rgba(232, 184, 109, 0.15)',
+    backgroundColor: colors.surfaceHighlight,
   },
   rewardIcon: {
-    fontSize: 72,
-    marginRight: spacing.xl,
+    fontSize: 48,
+    marginRight: spacing.lg,
   },
   rewardTitle: {
     flex: 1,
-    fontSize: fontSize.lg,
+    fontSize: fontSize.md,
     fontWeight: '600',
     color: colors.textPrimary,
   },
@@ -178,26 +206,26 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   starBurst: {
-    fontSize: 64,
+    fontSize: 44,
     marginLeft: spacing.md,
   },
   winnerBanner: {
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.xxl,
+    ...rounded('xl'),
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
-    borderWidth: 4,
+    borderWidth: 2,
     borderColor: colors.accent,
   },
   winnerEmoji: {
-    fontSize: 96,
-    marginRight: spacing.xl,
+    fontSize: 64,
+    marginRight: spacing.lg,
   },
   winnerText: {
-    fontSize: fontSize.xl,
+    fontSize: fontSize.lg,
     fontWeight: '800',
     color: colors.accent,
   },

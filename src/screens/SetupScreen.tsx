@@ -1,43 +1,72 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { TVFocusGuideView } from '@amazon-devices/react-native-kepler';
 import { useFamilyContext } from '../context/FamilyContext';
 import FocusableButton from '../components/FocusableButton';
-import { colors, fontSize, spacing, borderRadius, commonStyles } from '../theme';
+import TVKeyboard from '../components/TVKeyboard';
+import TVNumPad from '../components/TVNumPad';
+import { avatarEmojis, colors, fontSize, spacing, rounded, commonStyles } from '../theme';
 
-type SetupStep = 'welcome' | 'family-name' | 'children' | 'pin';
+type SetupStep =
+  | 'welcome'
+  | 'family-name'
+  | 'child-count'
+  | 'child-name'
+  | 'child-avatar'
+  | 'pin';
 
 export default function SetupScreen() {
   const { setupFamily } = useFamilyContext();
 
   const [step, setStep] = useState<SetupStep>('welcome');
   const [familyName, setFamilyName] = useState('');
-  const [childNames, setChildNames] = useState(['', '']);
+  const [childCount, setChildCount] = useState(2);
+  const [childNames, setChildNames] = useState<string[]>([]);
+  const [childAvatars, setChildAvatars] = useState<string[]>([]);
+  const [currentChildIdx, setCurrentChildIdx] = useState(0);
+  const [currentName, setCurrentName] = useState('');
   const [pin, setPin] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
-  const handleAddChild = () => {
-    if (childNames.length < 4) {
-      setChildNames([...childNames, '']);
+  const handleFamilyNameDone = () => {
+    if (!familyName.trim()) return;
+    setStep('child-count');
+  };
+
+  const handleChildCountSelected = (count: number) => {
+    setChildCount(count);
+    setChildNames([]);
+    setChildAvatars([]);
+    setCurrentChildIdx(0);
+    setCurrentName('');
+    setStep('child-name');
+  };
+
+  const handleChildNameDone = () => {
+    if (!currentName.trim()) return;
+    const names = [...childNames, currentName.trim()];
+    setChildNames(names);
+    setCurrentName('');
+    setStep('child-avatar');
+  };
+
+  const handleAvatarSelected = (emoji: string) => {
+    const avatars = [...childAvatars, emoji];
+    setChildAvatars(avatars);
+    const nextIdx = currentChildIdx + 1;
+    if (nextIdx < childCount) {
+      setCurrentChildIdx(nextIdx);
+      setCurrentName('');
+      setStep('child-name');
+    } else {
+      setStep('pin');
     }
   };
 
-  const handleRemoveChild = (idx: number) => {
-    if (childNames.length > 1) {
-      setChildNames(childNames.filter((_, i) => i !== idx));
-    }
-  };
-
-  const handleUpdateChild = (idx: number, name: string) => {
-    const updated = [...childNames];
-    updated[idx] = name;
-    setChildNames(updated);
-  };
-
-  const handleFinish = async () => {
+  const handlePinDone = async () => {
+    if (pin.length < 4 || isCreating) return;
     setIsCreating(true);
-    const validNames = childNames.filter((n) => n.trim());
-    await setupFamily(familyName.trim(), pin, validNames);
+    await setupFamily(familyName.trim(), pin, childNames);
   };
 
   if (step === 'welcome') {
@@ -53,7 +82,7 @@ export default function SetupScreen() {
           variant="accent"
           size="lg"
           onPress={() => setStep('family-name')}
-          style={{ marginTop: spacing.xxl }}
+          style={styles.topSpace}
           hasTVPreferredFocus
         />
       </View>
@@ -64,118 +93,113 @@ export default function SetupScreen() {
     return (
       <View style={[commonStyles.screenContainer, styles.centered]}>
         <Text style={styles.stepTitle}>What's your family name?</Text>
-        <TextInput
-          style={styles.bigInput}
+        <Text style={styles.stepSubtitle}>Use the on-screen keyboard</Text>
+        <TVKeyboard
           value={familyName}
           onChangeText={setFamilyName}
+          onSubmit={handleFamilyNameDone}
           placeholder="e.g. Johnson"
-          placeholderTextColor={colors.textMuted}
-          autoFocus
-        />
-        <FocusableButton
-          label="Next →"
-          variant="primary"
-          size="lg"
-          onPress={() => setStep('children')}
-          disabled={!familyName.trim()}
-          style={{ marginTop: spacing.xl }}
-          hasTVPreferredFocus
+          maxLength={20}
         />
       </View>
     );
   }
 
-  if (step === 'children') {
+  if (step === 'child-count') {
     return (
       <View style={[commonStyles.screenContainer, styles.centered]}>
-        <Text style={styles.stepTitle}>Who are the kids?</Text>
-        <Text style={styles.stepSubtitle}>Add 1 to 4 children</Text>
-
-        {childNames.map((name, idx) => (
-          <View key={idx} style={styles.childInputRow}>
-            <TextInput
-              style={[styles.bigInput, { flex: 1 }]}
-              value={name}
-              onChangeText={(v) => handleUpdateChild(idx, v)}
-              placeholder={`Child ${idx + 1}'s name`}
-              placeholderTextColor={colors.textMuted}
+        <Text style={styles.stepTitle}>How many kids?</Text>
+        <Text style={styles.stepSubtitle}>
+          {familyName} family — select the number of children
+        </Text>
+        <TVFocusGuideView style={styles.countRow}>
+          {[1, 2, 3, 4].map((n) => (
+            <FocusableButton
+              key={n}
+              label={String(n)}
+              variant={n === childCount ? 'accent' : 'secondary'}
+              size="lg"
+              onPress={() => handleChildCountSelected(n)}
+              style={styles.countButton}
+              hasTVPreferredFocus={n === 2}
             />
-            {childNames.length > 1 && (
-              <FocusableButton
-                label="✕"
-                variant="danger"
-                size="sm"
-                onPress={() => handleRemoveChild(idx)}
-                style={{ marginLeft: spacing.md }}
-              />
-            )}
-          </View>
-        ))}
+          ))}
+        </TVFocusGuideView>
+        <FocusableButton
+          label="← Back"
+          variant="ghost"
+          size="sm"
+          onPress={() => setStep('family-name')}
+          style={styles.topSpace}
+        />
+      </View>
+    );
+  }
 
-        {childNames.length < 4 && (
-          <FocusableButton
-            label="+ Add Another Child"
-            variant="ghost"
-            size="sm"
-            onPress={handleAddChild}
-            style={{ marginTop: spacing.md }}
-          />
-        )}
+  if (step === 'child-name') {
+    return (
+      <View style={[commonStyles.screenContainer, styles.centered]}>
+        <Text style={styles.stepTitle}>
+          Child {currentChildIdx + 1} of {childCount}
+        </Text>
+        <Text style={styles.stepSubtitle}>Enter their name</Text>
+        <TVKeyboard
+          value={currentName}
+          onChangeText={setCurrentName}
+          onSubmit={handleChildNameDone}
+          placeholder="Name"
+          maxLength={15}
+        />
+      </View>
+    );
+  }
 
-        <TVFocusGuideView style={styles.navButtons}>
-          <FocusableButton
-            label="← Back"
-            variant="ghost"
-            size="md"
-            onPress={() => setStep('family-name')}
-          />
-          <FocusableButton
-            label="Next →"
-            variant="primary"
-            size="lg"
-            onPress={() => setStep('pin')}
-            disabled={!childNames.some((n) => n.trim())}
-            hasTVPreferredFocus
-          />
+  if (step === 'child-avatar') {
+    return (
+      <View style={[commonStyles.screenContainer, styles.centered]}>
+        <Text style={styles.stepTitle}>
+          Pick an avatar for {childNames[currentChildIdx]}
+        </Text>
+        <Text style={styles.stepSubtitle}>Choose an emoji character</Text>
+        <TVFocusGuideView style={styles.avatarGrid}>
+          {avatarEmojis.map((emoji, idx) => (
+            <FocusableButton
+              key={emoji}
+              label={emoji}
+              variant="secondary"
+              size="lg"
+              onPress={() => handleAvatarSelected(emoji)}
+              style={styles.avatarButton}
+              hasTVPreferredFocus={idx === 0}
+            />
+          ))}
         </TVFocusGuideView>
       </View>
     );
   }
 
-  return (
-    <View style={[commonStyles.screenContainer, styles.centered]}>
-      <Text style={styles.stepTitle}>Set a parent PIN</Text>
-      <Text style={styles.stepSubtitle}>
-        Used to access settings from the phone companion app
-      </Text>
-      <TextInput
-        style={[styles.bigInput, styles.pinInput]}
-        value={pin}
-        onChangeText={(v) => setPin(v.replace(/\D/g, '').slice(0, 4))}
-        placeholder="4-digit PIN"
-        placeholderTextColor={colors.textMuted}
-        keyboardType="numeric"
-        maxLength={4}
-      />
+  if (step === 'pin') {
+    return (
+      <View style={[commonStyles.screenContainer, styles.centered]}>
+        <Text style={styles.stepTitle}>Set a parent PIN</Text>
+        <Text style={styles.stepSubtitle}>
+          Used to access settings from the companion app
+        </Text>
+        <TVNumPad
+          value={pin}
+          onChangeText={setPin}
+          onSubmit={handlePinDone}
+          maxLength={4}
+          label=""
+        />
+        {isCreating && (
+          <Text style={styles.creatingText}>Setting up your family...</Text>
+        )}
+      </View>
+    );
+  }
 
-      <TVFocusGuideView style={styles.navButtons}>
-        <FocusableButton
-          label="← Back"
-          variant="ghost"
-          size="md"
-          onPress={() => setStep('children')}
-        />
-        <FocusableButton
-          label={isCreating ? 'Creating...' : "Let's Go! 🌙"}
-          variant="accent"
-          size="lg"
-          onPress={handleFinish}
-          disabled={pin.length < 4 || isCreating}
-          hasTVPreferredFocus
-        />
-      </TVFocusGuideView>
-    </View>
-  );
+  return null;
 }
 
 const styles = StyleSheet.create({
@@ -197,7 +221,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     color: colors.textSecondary,
     textAlign: 'center',
-    maxWidth: 500,
+    maxWidth: 600,
   },
   stepTitle: {
     fontSize: fontSize.xxl,
@@ -210,36 +234,38 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: spacing.xl,
   },
-  bigInput: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
-    fontSize: fontSize.lg,
-    color: colors.textPrimary,
-    borderWidth: 2,
-    borderColor: colors.border,
-    minWidth: 350,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  pinInput: {
-    letterSpacing: 16,
-    fontSize: fontSize.xxl,
-    fontWeight: '700',
-    minWidth: 250,
-  },
-  childInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-    maxWidth: 450,
-    width: '100%',
-  },
-  navButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    maxWidth: 450,
+  topSpace: {
     marginTop: spacing.xxl,
+  },
+  countRow: {
+    flexDirection: 'row',
+    marginTop: spacing.lg,
+  },
+  countButton: {
+    width: 140,
+    height: 140,
+    marginHorizontal: spacing.md,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  avatarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    maxWidth: 700,
+    marginTop: spacing.lg,
+  },
+  avatarButton: {
+    width: 140,
+    height: 140,
+    margin: spacing.md,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  creatingText: {
+    fontSize: fontSize.md,
+    color: colors.accent,
+    marginTop: spacing.xl,
+    fontWeight: '600',
   },
 });

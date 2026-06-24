@@ -1,11 +1,18 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { TVFocusGuideView } from '@amazon-devices/react-native-kepler';
 import { useFamilyContext } from '../context/FamilyContext';
 import ChecklistItemRow from '../components/ChecklistItemRow';
 import ProgressBar from '../components/ProgressBar';
 import FocusableButton from '../components/FocusableButton';
-import { colors, fontSize, spacing, commonStyles } from '../theme';
+import { colors, fontSize, spacing, rounded, commonStyles } from '../theme';
+
+function formatTime(totalSeconds: number): string {
+  if (totalSeconds <= 0) return '0:00';
+  const m = Math.floor(totalSeconds / 60);
+  const s = Math.floor(totalSeconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
 
 export default function ChecklistScreen() {
   const {
@@ -13,6 +20,7 @@ export default function ChecklistScreen() {
     children,
     tonight,
     toggleItem,
+    startTimer,
     navigate,
     goBack,
     getChildProgress,
@@ -28,6 +36,30 @@ export default function ChecklistScreen() {
 
   const allDone =
     progress.completed >= progress.total && progress.total > 0;
+
+  const timerMinutes = child?.timerMinutes ?? 15;
+  const timerStartedAt = childTonight?.timerStartedAt ?? null;
+
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!nav.childId) return;
+    startTimer(nav.childId);
+  }, [nav.childId, startTimer]);
+
+  useEffect(() => {
+    if (!timerStartedAt) return;
+
+    const tick = () => {
+      const elapsed = (Date.now() - timerStartedAt) / 1000;
+      const remaining = timerMinutes * 60 - elapsed;
+      setRemainingSeconds(remaining);
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [timerStartedAt, timerMinutes]);
 
   useEffect(() => {
     if (allDone && nav.childId && !childTonight?.allComplete) {
@@ -56,31 +88,49 @@ export default function ChecklistScreen() {
     );
   }
 
+  const timerExpired = remainingSeconds !== null && remainingSeconds <= 0;
+
   return (
     <View style={commonStyles.screenContainer}>
       <View style={styles.header}>
         <FocusableButton
-          label="← Back"
+          label="←"
           variant="ghost"
           size="sm"
           onPress={goBack}
         />
-        <View style={styles.childInfo}>
-          <Text style={styles.avatar}>{child.avatar}</Text>
-          <Text style={styles.childName}>{child.name}'s Bedtime</Text>
+        <Text style={styles.avatar}>{child.avatar}</Text>
+        <View style={styles.nameBlock}>
+          <Text style={styles.childName}>{child.name}</Text>
+          <Text style={styles.subtitle}>Bedtime Checklist</Text>
         </View>
-        <View style={styles.progressWrapper}>
-          <ProgressBar
-            completed={progress.completed}
-            total={progress.total}
-          />
+
+        <View style={styles.headerRight}>
+          {remainingSeconds !== null && (
+            <View style={[styles.timerPill, timerExpired && styles.timerExpired]}>
+              <Text style={styles.timerIcon}>{timerExpired ? '⏰' : '⏱️'}</Text>
+              <Text style={[styles.timerText, timerExpired && styles.timerTextExpired]}>
+                {timerExpired ? "Time's up" : formatTime(remainingSeconds)}
+              </Text>
+            </View>
+          )}
+          <View style={styles.progressBox}>
+            <ProgressBar
+              completed={progress.completed}
+              total={progress.total}
+              showLabel={false}
+            />
+            <Text style={styles.progressLabel}>
+              {progress.completed}/{progress.total}
+            </Text>
+          </View>
         </View>
       </View>
 
       {allDone && (
         <View style={styles.completeBanner}>
           <Text style={styles.completeText}>
-            Amazing job, {child.name}! 🌟
+            Amazing job, {child.name}!
           </Text>
           <Text style={styles.completeSubtext}>
             Spinning the reward wheel...
@@ -99,6 +149,7 @@ export default function ChecklistScreen() {
                 icon={item.icon}
                 isChecked={isChecked}
                 onToggle={() => handleToggle(item.id)}
+                hasTVPreferredFocus={idx === 0}
               />
             );
           })}
@@ -113,42 +164,87 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.lg,
-  },
-  childInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginLeft: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   avatar: {
-    fontSize: 80,
-    marginRight: spacing.md,
+    fontSize: 52,
+    marginLeft: spacing.md,
+    marginRight: spacing.sm,
+  },
+  nameBlock: {
+    flex: 0,
+    marginRight: spacing.lg,
   },
   childName: {
-    fontSize: fontSize.xl,
+    fontSize: fontSize.lg,
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  progressWrapper: {
-    width: 300,
-    marginLeft: spacing.lg,
+  subtitle: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  headerRight: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  timerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    ...rounded('round'),
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginRight: spacing.lg,
+  },
+  timerExpired: {
+    borderColor: colors.danger,
+    backgroundColor: colors.dangerDim,
+  },
+  timerIcon: {
+    fontSize: 28,
+    marginRight: spacing.sm,
+  },
+  timerText: {
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    color: colors.accent,
+  },
+  timerTextExpired: {
+    color: colors.danger,
+  },
+  progressBox: {
+    width: 200,
+    alignItems: 'center',
+  },
+  progressLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    fontWeight: '600',
   },
   completeBanner: {
-    backgroundColor: colors.surfaceHighlight,
-    borderRadius: borderRadius.lg,
+    backgroundColor: colors.successDim,
+    ...rounded('lg'),
     padding: spacing.lg,
     alignItems: 'center',
-    marginBottom: spacing.lg,
-    borderWidth: 2,
+    marginBottom: spacing.md,
+    borderWidth: 1,
     borderColor: colors.success,
   },
   completeText: {
-    fontSize: fontSize.lg,
+    fontSize: fontSize.md,
     fontWeight: '700',
-    color: colors.success,
+    color: colors.successLight,
   },
   completeSubtext: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },

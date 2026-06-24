@@ -3,16 +3,17 @@ import {
   View,
   Text,
   ScrollView,
-  TextInput,
   StyleSheet,
 } from 'react-native';
 import { TVFocusGuideView } from '@amazon-devices/react-native-kepler';
 import { useFamilyContext } from '../context/FamilyContext';
 import FocusableButton from '../components/FocusableButton';
-import { avatarEmojis, colors, fontSize, spacing, borderRadius, commonStyles } from '../theme';
+import TVKeyboard from '../components/TVKeyboard';
+import QRCode from '../components/QRCode';
+import { avatarEmojis, colors, fontSize, spacing, rounded, commonStyles } from '../theme';
 
 export default function SettingsScreen() {
-  const { nav, navigate, goBack } = useFamilyContext();
+  const { nav, familyId, navigate, goBack } = useFamilyContext();
 
   if (nav.screen === 'settings-children') return <ManageChildren />;
   if (nav.screen === 'settings-checklist') return <ManageChecklist />;
@@ -22,7 +23,7 @@ export default function SettingsScreen() {
     <View style={commonStyles.screenContainer}>
       <View style={styles.header}>
         <FocusableButton
-          label="← Back"
+          label="←"
           variant="ghost"
           size="sm"
           onPress={goBack}
@@ -57,28 +58,103 @@ export default function SettingsScreen() {
           style={styles.menuItem}
         />
       </TVFocusGuideView>
+
+      <View style={styles.companionHint}>
+        {familyId && (
+          <View style={styles.qrRow}>
+            <QRCode
+              value={`https://bedtime.jg-it.net?code=${familyId}`}
+              size={100}
+              color="#FFFFFF"
+              bgColor={colors.surface}
+            />
+            <View style={styles.qrInfo}>
+              <Text style={styles.companionText}>
+                Scan to manage on your phone
+              </Text>
+              <Text style={styles.companionCode}>{familyId}</Text>
+            </View>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
 
 function ManageChildren() {
-  const { children, addNewChild, editChild, deleteChild, goBack } =
-    useFamilyContext();
+  const { children, tonight, addNewChild, updateChildTimer, resetTonight, deleteChild, goBack } = useFamilyContext();
+  const [addMode, setAddMode] = useState<'idle' | 'name' | 'avatar'>('idle');
   const [newName, setNewName] = useState('');
-  const [selectedAvatar, setSelectedAvatar] = useState(0);
+  const [selectedAvatar, setSelectedAvatar] = useState('');
 
-  const handleAdd = async () => {
+  const handleNameDone = () => {
     if (!newName.trim()) return;
-    await addNewChild(newName.trim(), avatarEmojis[selectedAvatar]);
-    setNewName('');
-    setSelectedAvatar((s) => (s + 1) % avatarEmojis.length);
+    setAddMode('avatar');
   };
+
+  const handleAvatarDone = async (emoji: string) => {
+    setSelectedAvatar(emoji);
+    await addNewChild(newName.trim(), emoji);
+    setNewName('');
+    setSelectedAvatar('');
+    setAddMode('idle');
+  };
+
+  if (addMode === 'name') {
+    return (
+      <View style={[commonStyles.screenContainer, styles.centeredContent]}>
+        <Text style={styles.title}>Enter child's name</Text>
+        <TVKeyboard
+          value={newName}
+          onChangeText={setNewName}
+          onSubmit={handleNameDone}
+          placeholder="Name"
+          maxLength={15}
+        />
+        <FocusableButton
+          label="Cancel"
+          variant="ghost"
+          size="sm"
+          onPress={() => { setAddMode('idle'); setNewName(''); }}
+          style={styles.cancelButton}
+        />
+      </View>
+    );
+  }
+
+  if (addMode === 'avatar') {
+    return (
+      <View style={[commonStyles.screenContainer, styles.centeredContent]}>
+        <Text style={styles.title}>Pick an avatar for {newName}</Text>
+        <TVFocusGuideView style={styles.avatarGrid}>
+          {avatarEmojis.map((emoji, idx) => (
+            <FocusableButton
+              key={emoji}
+              label={emoji}
+              variant="secondary"
+              size="lg"
+              onPress={() => handleAvatarDone(emoji)}
+              style={styles.avatarButton}
+              hasTVPreferredFocus={idx === 0}
+            />
+          ))}
+        </TVFocusGuideView>
+        <FocusableButton
+          label="Cancel"
+          variant="ghost"
+          size="sm"
+          onPress={() => { setAddMode('idle'); setNewName(''); }}
+          style={styles.cancelButton}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={commonStyles.screenContainer}>
       <View style={styles.header}>
         <FocusableButton
-          label="← Back"
+          label="←"
           variant="ghost"
           size="sm"
           onPress={goBack}
@@ -89,49 +165,58 @@ function ManageChildren() {
 
       <ScrollView style={styles.content}>
         {children.map((child) => (
-          <View key={child.id} style={styles.itemRow}>
-            <Text style={styles.itemIcon}>{child.avatar}</Text>
-            <Text style={styles.itemTitle}>{child.name}</Text>
-            <FocusableButton
-              label="Remove"
-              variant="danger"
-              size="sm"
-              onPress={() => deleteChild(child.id)}
-            />
+          <View key={child.id} style={styles.childCard}>
+            <View style={styles.childCardTop}>
+              <Text style={styles.itemAvatar}>{child.avatar}</Text>
+              <Text style={styles.itemTitle}>{child.name}</Text>
+              <FocusableButton
+                label="Remove"
+                variant="danger"
+                size="sm"
+                onPress={() => deleteChild(child.id)}
+              />
+            </View>
+            <View style={styles.timerRow}>
+              <Text style={styles.timerLabel}>Bedtime timer:</Text>
+              <FocusableButton
+                label="-"
+                variant="secondary"
+                size="sm"
+                onPress={() => updateChildTimer(child.id, Math.max(5, (child.timerMinutes || 15) - 5))}
+                style={styles.timerBtn}
+              />
+              <Text style={styles.timerValue}>{child.timerMinutes || 15} min</Text>
+              <FocusableButton
+                label="+"
+                variant="secondary"
+                size="sm"
+                onPress={() => updateChildTimer(child.id, Math.min(60, (child.timerMinutes || 15) + 5))}
+                style={styles.timerBtn}
+              />
+            </View>
+            {tonight[child.id] && (
+              <View style={styles.timerRow}>
+                <FocusableButton
+                  label="Reset Tonight"
+                  icon="🔄"
+                  variant="danger"
+                  size="sm"
+                  onPress={() => resetTonight(child.id)}
+                />
+              </View>
+            )}
           </View>
         ))}
 
         {children.length < 4 && (
-          <View style={styles.addSection}>
-            <Text style={styles.addLabel}>Add a child</Text>
-            <TVFocusGuideView style={styles.avatarPicker}>
-              {avatarEmojis.map((emoji, idx) => (
-                <FocusableButton
-                  key={emoji}
-                  label={emoji}
-                  variant={idx === selectedAvatar ? 'accent' : 'ghost'}
-                  size="sm"
-                  onPress={() => setSelectedAvatar(idx)}
-                  style={styles.avatarOption}
-                />
-              ))}
-            </TVFocusGuideView>
-            <TextInput
-              style={styles.input}
-              value={newName}
-              onChangeText={setNewName}
-              placeholder="Child's name"
-              placeholderTextColor={colors.textMuted}
-              onSubmitEditing={handleAdd}
-            />
-            <FocusableButton
-              label="Add Child"
-              icon="➕"
-              variant="primary"
-              onPress={handleAdd}
-              disabled={!newName.trim()}
-            />
-          </View>
+          <FocusableButton
+            label="+ Add Child"
+            icon="👶"
+            variant="primary"
+            size="md"
+            onPress={() => setAddMode('name')}
+            style={styles.addButton}
+          />
         )}
       </ScrollView>
     </View>
@@ -139,26 +224,56 @@ function ManageChildren() {
 }
 
 function ManageChecklist() {
-  const { children, getChecklistForChild, addNewChecklistItem, deleteChecklistItem, goBack } =
-    useFamilyContext();
+  const {
+    children,
+    getChecklistForChild,
+    addNewChecklistItem,
+    deleteChecklistItem,
+    goBack,
+  } = useFamilyContext();
   const [selectedChild, setSelectedChild] = useState(0);
+  const [addMode, setAddMode] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newIcon, setNewIcon] = useState('✅');
 
   const child = children[selectedChild];
   const items = child ? getChecklistForChild(child.id) : [];
 
-  const handleAdd = async () => {
+  const handleAddDone = async () => {
     if (!newTitle.trim() || !child) return;
-    await addNewChecklistItem(child.id, newTitle.trim(), newIcon);
+    await addNewChecklistItem(child.id, newTitle.trim(), '✅');
     setNewTitle('');
+    setAddMode(false);
   };
+
+  if (addMode) {
+    return (
+      <View style={[commonStyles.screenContainer, styles.centeredContent]}>
+        <Text style={styles.title}>
+          New checklist item for {child?.name}
+        </Text>
+        <TVKeyboard
+          value={newTitle}
+          onChangeText={setNewTitle}
+          onSubmit={handleAddDone}
+          placeholder="e.g. Brush teeth"
+          maxLength={30}
+        />
+        <FocusableButton
+          label="Cancel"
+          variant="ghost"
+          size="sm"
+          onPress={() => { setAddMode(false); setNewTitle(''); }}
+          style={styles.cancelButton}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={commonStyles.screenContainer}>
       <View style={styles.header}>
         <FocusableButton
-          label="← Back"
+          label="←"
           variant="ghost"
           size="sm"
           onPress={goBack}
@@ -175,7 +290,7 @@ function ManageChecklist() {
             variant={idx === selectedChild ? 'primary' : 'ghost'}
             size="sm"
             onPress={() => setSelectedChild(idx)}
-            style={{ marginRight: spacing.sm }}
+            style={styles.tab}
           />
         ))}
       </TVFocusGuideView>
@@ -183,7 +298,7 @@ function ManageChecklist() {
       <ScrollView style={styles.content}>
         {items.map((item) => (
           <View key={item.id} style={styles.itemRow}>
-            <Text style={styles.itemIcon}>{item.icon}</Text>
+            <Text style={styles.itemAvatar}>{item.icon}</Text>
             <Text style={styles.itemTitle}>{item.title}</Text>
             <FocusableButton
               label="Remove"
@@ -194,54 +309,64 @@ function ManageChecklist() {
           </View>
         ))}
 
-        <View style={styles.addSection}>
-          <Text style={styles.addLabel}>Add an item</Text>
-          <View style={commonStyles.row}>
-            <TextInput
-              style={[styles.input, styles.iconInput]}
-              value={newIcon}
-              onChangeText={setNewIcon}
-              placeholder="Icon"
-              placeholderTextColor={colors.textMuted}
-            />
-            <TextInput
-              style={[styles.input, { flex: 1, marginLeft: spacing.md }]}
-              value={newTitle}
-              onChangeText={setNewTitle}
-              placeholder="Item name (e.g. Brush teeth)"
-              placeholderTextColor={colors.textMuted}
-              onSubmitEditing={handleAdd}
-            />
-          </View>
-          <FocusableButton
-            label="Add Item"
-            icon="➕"
-            variant="primary"
-            onPress={handleAdd}
-            disabled={!newTitle.trim()}
-          />
-        </View>
+        <FocusableButton
+          label="+ Add Item"
+          icon="➕"
+          variant="primary"
+          size="md"
+          onPress={() => setAddMode(true)}
+          style={styles.addButton}
+        />
       </ScrollView>
     </View>
   );
 }
 
 function ManageRewards() {
-  const { rewards, addNewReward, deleteReward, goBack } = useFamilyContext();
+  const { children, getRewardsForChild, addNewReward, deleteReward, goBack } = useFamilyContext();
+  const [selectedChild, setSelectedChild] = useState(0);
+  const [addMode, setAddMode] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newIcon, setNewIcon] = useState('🎁');
 
-  const handleAdd = async () => {
-    if (!newTitle.trim()) return;
-    await addNewReward(newTitle.trim(), newIcon);
+  const child = children[selectedChild];
+  const childRewards = child ? getRewardsForChild(child.id) : [];
+
+  const handleAddDone = async () => {
+    if (!newTitle.trim() || !child) return;
+    await addNewReward(child.id, newTitle.trim(), '🎁');
     setNewTitle('');
+    setAddMode(false);
   };
+
+  if (addMode) {
+    return (
+      <View style={[commonStyles.screenContainer, styles.centeredContent]}>
+        <Text style={styles.title}>
+          New reward for {child?.name}
+        </Text>
+        <TVKeyboard
+          value={newTitle}
+          onChangeText={setNewTitle}
+          onSubmit={handleAddDone}
+          placeholder="e.g. Extra story time"
+          maxLength={30}
+        />
+        <FocusableButton
+          label="Cancel"
+          variant="ghost"
+          size="sm"
+          onPress={() => { setAddMode(false); setNewTitle(''); }}
+          style={styles.cancelButton}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={commonStyles.screenContainer}>
       <View style={styles.header}>
         <FocusableButton
-          label="← Back"
+          label="←"
           variant="ghost"
           size="sm"
           onPress={goBack}
@@ -250,47 +375,41 @@ function ManageRewards() {
         <Text style={styles.title}>Reward Items</Text>
       </View>
 
+      <TVFocusGuideView style={styles.tabs}>
+        {children.map((c, idx) => (
+          <FocusableButton
+            key={c.id}
+            label={`${c.avatar} ${c.name}`}
+            variant={idx === selectedChild ? 'primary' : 'ghost'}
+            size="sm"
+            onPress={() => setSelectedChild(idx)}
+            style={styles.tab}
+          />
+        ))}
+      </TVFocusGuideView>
+
       <ScrollView style={styles.content}>
-        {rewards.map((reward) => (
+        {childRewards.map((reward) => (
           <View key={reward.id} style={styles.itemRow}>
-            <Text style={styles.itemIcon}>{reward.icon}</Text>
+            <Text style={styles.itemAvatar}>{reward.icon}</Text>
             <Text style={styles.itemTitle}>{reward.title}</Text>
             <FocusableButton
               label="Remove"
               variant="danger"
               size="sm"
-              onPress={() => deleteReward(reward.id)}
+              onPress={() => child && deleteReward(child.id, reward.id)}
             />
           </View>
         ))}
 
-        <View style={styles.addSection}>
-          <Text style={styles.addLabel}>Add a reward</Text>
-          <View style={commonStyles.row}>
-            <TextInput
-              style={[styles.input, styles.iconInput]}
-              value={newIcon}
-              onChangeText={setNewIcon}
-              placeholder="Icon"
-              placeholderTextColor={colors.textMuted}
-            />
-            <TextInput
-              style={[styles.input, { flex: 1, marginLeft: spacing.md }]}
-              value={newTitle}
-              onChangeText={setNewTitle}
-              placeholder="Reward name (e.g. Extra story time)"
-              placeholderTextColor={colors.textMuted}
-              onSubmitEditing={handleAdd}
-            />
-          </View>
-          <FocusableButton
-            label="Add Reward"
-            icon="➕"
-            variant="primary"
-            onPress={handleAdd}
-            disabled={!newTitle.trim()}
-          />
-        </View>
+        <FocusableButton
+          label="+ Add Reward"
+          icon="➕"
+          variant="primary"
+          size="md"
+          onPress={() => setAddMode(true)}
+          style={styles.addButton}
+        />
       </ScrollView>
     </View>
   );
@@ -316,23 +435,93 @@ const styles = StyleSheet.create({
   menuItem: {
     marginBottom: spacing.lg,
   },
+  companionHint: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  qrRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  qrInfo: {
+    marginLeft: spacing.lg,
+  },
+  companionText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  companionCode: {
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    color: colors.primaryLight,
+    letterSpacing: 3,
+    marginTop: spacing.xs,
+  },
+  content: {
+    flex: 1,
+  },
+  centeredContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tabs: {
     flexDirection: 'row',
     marginBottom: spacing.lg,
   },
-  content: {
-    flex: 1,
+  tab: {
+    marginRight: spacing.sm,
+  },
+  childCard: {
+    backgroundColor: colors.surface,
+    ...rounded('lg'),
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  childCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  timerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    paddingLeft: spacing.xxl,
+  },
+  timerLabel: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginRight: spacing.md,
+  },
+  timerBtn: {
+    width: 64,
+    height: 52,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    marginHorizontal: spacing.xs,
+  },
+  timerValue: {
+    fontSize: fontSize.md,
+    fontWeight: '700',
+    color: colors.accent,
+    minWidth: 100,
+    textAlign: 'center',
   },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
+    ...rounded('lg'),
     padding: spacing.md,
     marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  itemIcon: {
-    fontSize: 32,
+  itemAvatar: {
+    fontSize: 40,
     marginRight: spacing.md,
   },
   itemTitle: {
@@ -341,39 +530,24 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '600',
   },
-  addSection: {
-    marginTop: spacing.xl,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+  addButton: {
+    marginTop: spacing.lg,
   },
-  addLabel: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
+  cancelButton: {
+    marginTop: spacing.lg,
   },
-  avatarPicker: {
+  avatarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: spacing.md,
+    justifyContent: 'center',
+    maxWidth: 700,
+    marginTop: spacing.lg,
   },
-  avatarOption: {
-    marginRight: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.surfaceHighlight,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
-    borderWidth: 2,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-  },
-  iconInput: {
-    width: 80,
-    textAlign: 'center',
+  avatarButton: {
+    width: 120,
+    height: 120,
+    margin: spacing.sm,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
 });

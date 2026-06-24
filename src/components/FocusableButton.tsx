@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -6,7 +6,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { colors, fontSize, borderRadius, spacing } from '../theme';
+import { colors, fontSize, rounded, spacing } from '../theme';
 
 interface Props {
   label: string;
@@ -71,13 +71,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.md,
-    borderWidth: 4,
+    ...rounded('md'),
+    borderWidth: 2,
     borderColor: 'transparent',
   },
   focused: {
     borderColor: colors.focusRing,
-    transform: [{ scale: 1.05 }],
   },
   label: {
     fontWeight: '600',
@@ -86,7 +85,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   disabled: {
-    opacity: 0.4,
+    opacity: 0.35,
   },
   disabledText: {
     color: colors.textMuted,
@@ -97,22 +96,22 @@ const variantStyles = {
   primary: StyleSheet.create({
     container: { backgroundColor: colors.primary },
     focused: { backgroundColor: colors.primaryLight },
-    label: { color: colors.textPrimary } as TextStyle,
+    label: { color: '#FFFFFF' } as TextStyle,
   }),
   secondary: StyleSheet.create({
-    container: { backgroundColor: colors.surface },
-    focused: { backgroundColor: colors.surfaceLight },
+    container: { backgroundColor: colors.surface, borderColor: colors.border },
+    focused: { backgroundColor: colors.surfaceLight, borderColor: colors.focusRing },
     label: { color: colors.textPrimary } as TextStyle,
   }),
   accent: StyleSheet.create({
     container: { backgroundColor: colors.accentDim },
     focused: { backgroundColor: colors.accent },
-    label: { color: colors.background } as TextStyle,
+    label: { color: '#FFFFFF' } as TextStyle,
   }),
   danger: StyleSheet.create({
     container: { backgroundColor: colors.dangerDim },
     focused: { backgroundColor: colors.danger },
-    label: { color: colors.textPrimary } as TextStyle,
+    label: { color: '#FFFFFF' } as TextStyle,
   }),
   ghost: StyleSheet.create({
     container: { backgroundColor: 'transparent' },
@@ -123,18 +122,18 @@ const variantStyles = {
 
 const sizeStyles = {
   sm: StyleSheet.create({
-    container: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+    container: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+    label: { fontSize: fontSize.xs } as TextStyle,
+    icon: { fontSize: fontSize.xs } as TextStyle,
+  }),
+  md: StyleSheet.create({
+    container: { paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
     label: { fontSize: fontSize.sm } as TextStyle,
     icon: { fontSize: fontSize.sm } as TextStyle,
   }),
-  md: StyleSheet.create({
-    container: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg },
+  lg: StyleSheet.create({
+    container: { paddingHorizontal: spacing.xxl, paddingVertical: spacing.lg },
     label: { fontSize: fontSize.md } as TextStyle,
     icon: { fontSize: fontSize.md } as TextStyle,
-  }),
-  lg: StyleSheet.create({
-    container: { paddingHorizontal: spacing.xxl, paddingVertical: spacing.xl },
-    label: { fontSize: fontSize.lg } as TextStyle,
-    icon: { fontSize: fontSize.lg } as TextStyle,
   }),
 };

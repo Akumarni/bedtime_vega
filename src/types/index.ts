@@ -3,6 +3,7 @@ export interface Child {
   name: string;
   avatar: string;
   order: number;
+  timerMinutes: number;
 }
 
 export interface ChecklistItem {
@@ -24,6 +25,7 @@ export interface TonightProgress {
   rewardWon: string | null;
   rewardIcon: string | null;
   completedAt: number | null;
+  timerStartedAt: number | null;
 }
 
 export interface RewardHistoryEntry {
@@ -52,6 +54,7 @@ export type Screen =
   | 'checklist'
   | 'reward'
   | 'dashboard'
+  | 'settings-pin'
   | 'settings'
   | 'settings-children'
   | 'settings-checklist'

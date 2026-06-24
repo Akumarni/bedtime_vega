@@ -1,35 +1,36 @@
 import { StyleSheet } from 'react-native';
 
 export const colors = {
-  background: '#0B1026',
-  surface: '#151B33',
-  surfaceLight: '#1E2747',
-  surfaceHighlight: '#253058',
+  background: '#080D1F',
+  surface: '#111827',
+  surfaceLight: '#1A2236',
+  surfaceHighlight: '#222D45',
 
-  primary: '#7B6BA8',
-  primaryLight: '#9B8EC4',
-  primaryDim: '#5C4F87',
+  primary: '#6C5CE7',
+  primaryLight: '#A29BFE',
+  primaryDim: '#4A3FA0',
 
-  accent: '#E8B86D',
-  accentSoft: '#C49A4E',
-  accentDim: '#8B7040',
+  accent: '#FDCB6E',
+  accentSoft: '#D4A84A',
+  accentDim: '#7A6530',
 
-  success: '#5CB87A',
-  successLight: '#6ECB8A',
-  successDim: '#3A7A50',
+  success: '#00B894',
+  successLight: '#55EFC4',
+  successDim: '#1B7A5E',
 
-  textPrimary: '#E8E6F0',
-  textSecondary: '#8B87A3',
-  textMuted: '#5D5A70',
+  textPrimary: '#F0EFFA',
+  textSecondary: '#9093A8',
+  textMuted: '#555972',
 
-  border: '#2A3050',
-  focusRing: '#9B8EC4',
-  focusGlow: 'rgba(155, 142, 196, 0.3)',
+  border: '#1F2940',
+  borderLight: '#2D3A55',
+  focusRing: '#A29BFE',
+  focusGlow: '#3D3762',
 
-  danger: '#D46B6B',
-  dangerDim: '#8B4545',
+  danger: '#E17055',
+  dangerDim: '#7A3E30',
 
-  overlay: 'rgba(11, 16, 38, 0.85)',
+  overlay: '#0D1225',
 };
 
 export const spacing = {
@@ -43,43 +44,51 @@ export const spacing = {
 };
 
 export const fontSize = {
-  xs: 28,
-  sm: 36,
-  md: 44,
-  lg: 56,
-  xl: 72,
-  xxl: 96,
-  hero: 128,
+  xs: 24,
+  sm: 32,
+  md: 40,
+  lg: 52,
+  xl: 64,
+  xxl: 80,
+  hero: 112,
 };
 
-export const borderRadius = {
+export const borderRadiusValues = {
   sm: 8,
   md: 12,
   lg: 16,
   xl: 24,
+  xxl: 32,
   round: 999,
 };
+
+export function rounded(size: keyof typeof borderRadiusValues) {
+  const r = borderRadiusValues[size];
+  return {
+    borderTopLeftRadius: r,
+    borderTopRightRadius: r,
+    borderBottomLeftRadius: r,
+    borderBottomRightRadius: r,
+  };
+}
 
 export const commonStyles = StyleSheet.create({
   screenContainer: {
     flex: 1,
     backgroundColor: colors.background,
-    padding: spacing.xl,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.xl,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
+    ...rounded('xl'),
     padding: spacing.lg,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   cardFocused: {
     borderColor: colors.focusRing,
-    shadowColor: colors.focusGlow,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 8,
+    backgroundColor: colors.surfaceLight,
   },
   title: {
     fontSize: fontSize.xl,
@@ -106,6 +115,11 @@ export const commonStyles = StyleSheet.create({
   center: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.lg,
   },
 });
 

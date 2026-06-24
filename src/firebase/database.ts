@@ -165,13 +165,14 @@ export function subscribeToChecklistItems(
   return () => off(dbRef, 'value', handler);
 }
 
-// --- Rewards ---
+// --- Rewards (per child) ---
 
 export async function addReward(
   familyId: string,
+  childId: string,
   reward: Omit<RewardItem, 'id'>,
 ): Promise<string> {
-  const newRef = push(familyRef(familyId, 'rewards'));
+  const newRef = push(familyRef(familyId, `children/${childId}/rewards`));
   const id = newRef.key!;
   await set(newRef, { ...reward, id });
   return id;
@@ -179,16 +180,18 @@ export async function addReward(
 
 export async function removeReward(
   familyId: string,
+  childId: string,
   rewardId: string,
 ): Promise<void> {
-  await remove(familyRef(familyId, `rewards/${rewardId}`));
+  await remove(familyRef(familyId, `children/${childId}/rewards/${rewardId}`));
 }
 
 export function subscribeToRewards(
   familyId: string,
+  childId: string,
   callback: (rewards: RewardItem[]) => void,
 ): () => void {
-  const dbRef = familyRef(familyId, 'rewards');
+  const dbRef = familyRef(familyId, `children/${childId}/rewards`);
   const handler = onValue(dbRef, (snapshot) => {
     const data = snapshot.val();
     if (!data) {
@@ -202,6 +205,36 @@ export function subscribeToRewards(
 }
 
 // --- Tonight's Progress ---
+
+export async function resetChildTonight(
+  familyId: string,
+  childId: string,
+): Promise<void> {
+  const dateKey = getTodayKey();
+  await remove(ref(database, `tonight/${familyId}/${dateKey}/${childId}`));
+
+  const historySnapshot = await get(ref(database, `history/${familyId}/${childId}`));
+  if (historySnapshot.exists()) {
+    const entries = historySnapshot.val();
+    for (const [key, entry] of Object.entries(entries) as [string, any][]) {
+      if (entry.date === dateKey) {
+        await remove(ref(database, `history/${familyId}/${childId}/${key}`));
+      }
+    }
+  }
+}
+
+export async function startChildTimer(
+  familyId: string,
+  childId: string,
+): Promise<void> {
+  const dateKey = getTodayKey();
+  const path = `tonight/${familyId}/${dateKey}/${childId}/timerStartedAt`;
+  const snapshot = await get(ref(database, path));
+  if (!snapshot.exists()) {
+    await set(ref(database, path), Date.now());
+  }
+}
 
 export async function toggleChecklistItemDone(
   familyId: string,
@@ -301,11 +334,12 @@ export async function seedDefaultsForChild(
   }
 }
 
-export async function seedRewards(
+export async function seedRewardsForChild(
   familyId: string,
+  childId: string,
   rewards: { title: string; icon: string }[],
 ): Promise<void> {
   for (const reward of rewards) {
-    await addReward(familyId, reward);
+    await addReward(familyId, childId, reward);
   }
 }

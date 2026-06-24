@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, spacing, borderRadius } from '../theme';
+import { colors, fontSize, spacing, rounded } from '../theme';
 
 interface Props {
   title: string;
   icon: string;
   isChecked: boolean;
   onToggle: () => void;
+  hasTVPreferredFocus?: boolean;
 }
 
 export default function ChecklistItemRow({
@@ -14,6 +15,7 @@ export default function ChecklistItemRow({
   icon,
   isChecked,
   onToggle,
+  hasTVPreferredFocus = false,
 }: Props) {
   const [focused, setFocused] = useState(false);
 
@@ -23,6 +25,7 @@ export default function ChecklistItemRow({
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       activeOpacity={0.8}
+      hasTVPreferredFocus={hasTVPreferredFocus}
       style={[
         styles.container,
         focused && styles.containerFocused,
@@ -32,7 +35,7 @@ export default function ChecklistItemRow({
         style={[
           styles.checkbox,
           isChecked && styles.checkboxChecked,
-          focused && styles.checkboxFocused,
+          focused && !isChecked && styles.checkboxFocused,
         ]}>
         {isChecked && <Text style={styles.checkmark}>✓</Text>}
       </View>
@@ -43,7 +46,11 @@ export default function ChecklistItemRow({
         {title}
       </Text>
 
-      {isChecked && <Text style={styles.doneLabel}>Done!</Text>}
+      {isChecked && (
+        <View style={styles.doneBadge}>
+          <Text style={styles.doneLabel}>Done</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -53,27 +60,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderWidth: 4,
-    borderColor: 'transparent',
+    ...rounded('lg'),
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 2,
+    borderColor: colors.border,
   },
   containerFocused: {
     borderColor: colors.focusRing,
     backgroundColor: colors.surfaceLight,
-    transform: [{ scale: 1.02 }],
   },
   containerChecked: {
-    backgroundColor: colors.surfaceHighlight,
-    opacity: 0.7,
+    borderColor: colors.successDim,
   },
   checkbox: {
-    width: 64,
-    height: 64,
-    borderRadius: borderRadius.sm,
-    borderWidth: 4,
-    borderColor: colors.border,
+    width: 52,
+    height: 52,
+    ...rounded('sm'),
+    borderWidth: 3,
+    borderColor: colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.lg,
@@ -86,28 +92,32 @@ const styles = StyleSheet.create({
     borderColor: colors.focusRing,
   },
   checkmark: {
-    color: colors.background,
-    fontSize: fontSize.md,
+    color: '#FFFFFF',
+    fontSize: fontSize.sm,
     fontWeight: '800',
   },
   icon: {
-    fontSize: 64,
-    marginRight: spacing.lg,
+    fontSize: 48,
+    marginRight: spacing.md,
   },
   title: {
     flex: 1,
-    fontSize: fontSize.lg,
+    fontSize: fontSize.md,
     fontWeight: '600',
     color: colors.textPrimary,
   },
   titleChecked: {
     color: colors.textMuted,
-    textDecorationLine: 'line-through',
+  },
+  doneBadge: {
+    backgroundColor: colors.successDim,
+    ...rounded('sm'),
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
   doneLabel: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     fontWeight: '700',
-    color: colors.success,
-    marginLeft: spacing.lg,
+    color: colors.successLight,
   },
 });

@@ -27,6 +27,8 @@ import {
   subscribeToTonight,
   subscribeToHistory,
   toggleChecklistItemDone,
+  startChildTimer,
+  resetChildTonight,
   markChildComplete,
   addChild,
   updateChild,
@@ -38,7 +40,7 @@ import {
   removeReward,
   updateFamilyPin,
   seedDefaultsForChild,
-  seedRewards,
+  seedRewardsForChild,
 } from '../firebase/database';
 import { defaultChecklistItems, defaultRewards } from '../theme';
 
@@ -55,12 +57,13 @@ function generateFamilyId(): string {
 interface FamilyContextValue {
   familyId: string | null;
   familyName: string;
+  familyPin: string;
   isLoading: boolean;
   isSetupComplete: boolean;
 
   children: Child[];
   checklistItems: Record<string, ChecklistItem[]>;
-  rewards: RewardItem[];
+  rewards: Record<string, RewardItem[]>;
   tonight: Record<string, TonightProgress>;
   history: Record<string, RewardHistoryEntry[]>;
 
@@ -69,6 +72,8 @@ interface FamilyContextValue {
   goBack: () => void;
 
   toggleItem: (childId: string, itemId: string, done: boolean) => Promise<void>;
+  startTimer: (childId: string) => Promise<void>;
+  resetTonight: (childId: string) => Promise<void>;
   completeChild: (
     childId: string,
     rewardTitle: string,
@@ -77,6 +82,7 @@ interface FamilyContextValue {
 
   addNewChild: (name: string, avatar: string) => Promise<void>;
   editChild: (childId: string, name: string, avatar: string) => Promise<void>;
+  updateChildTimer: (childId: string, minutes: number) => Promise<void>;
   deleteChild: (childId: string) => Promise<void>;
 
   addNewChecklistItem: (childId: string, title: string, icon: string) => Promise<void>;
@@ -89,8 +95,9 @@ interface FamilyContextValue {
   deleteChecklistItem: (childId: string, itemId: string) => Promise<void>;
   getChecklistForChild: (childId: string) => ChecklistItem[];
 
-  addNewReward: (title: string, icon: string) => Promise<void>;
-  deleteReward: (rewardId: string) => Promise<void>;
+  addNewReward: (childId: string, title: string, icon: string) => Promise<void>;
+  deleteReward: (childId: string, rewardId: string) => Promise<void>;
+  getRewardsForChild: (childId: string) => RewardItem[];
 
   changePin: (pin: string) => Promise<void>;
   setupFamily: (name: string, pin: string, childNames: string[]) => Promise<void>;
@@ -112,12 +119,13 @@ export function useFamilyContext(): FamilyContextValue {
 export function FamilyProvider({ children: reactChildren }: { children: ReactNode }) {
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [familyName, setFamilyName] = useState('');
+  const [familyPin, setFamilyPin] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSetupComplete, setIsSetupComplete] = useState(false);
 
   const [childrenList, setChildrenList] = useState<Child[]>([]);
   const [checklistItems, setChecklistItems] = useState<Record<string, ChecklistItem[]>>({});
-  const [rewards, setRewards] = useState<RewardItem[]>([]);
+  const [rewards, setRewards] = useState<Record<string, RewardItem[]>>({});
   const [tonight, setTonight] = useState<Record<string, TonightProgress>>({});
   const [history, setHistory] = useState<Record<string, RewardHistoryEntry[]>>(
     {},
@@ -136,6 +144,7 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
         if (info) {
           setFamilyId(storedId);
           setFamilyName(info.name);
+          setFamilyPin(info.pin);
           setIsSetupComplete(true);
         }
       }
@@ -148,7 +157,6 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
 
     const unsubs = [
       subscribeToChildren(familyId, setChildrenList),
-      subscribeToRewards(familyId, setRewards),
       subscribeToTonight(familyId, setTonight),
     ];
 
@@ -158,11 +166,14 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
   useEffect(() => {
     if (!familyId || childrenList.length === 0) return;
 
-    const unsubs = childrenList.map((child) =>
+    const unsubs = childrenList.flatMap((child) => [
       subscribeToChecklistItems(familyId, child.id, (items) => {
         setChecklistItems((prev) => ({ ...prev, [child.id]: items }));
       }),
-    );
+      subscribeToRewards(familyId, child.id, (childRewards) => {
+        setRewards((prev) => ({ ...prev, [child.id]: childRewards }));
+      }),
+    ]);
 
     return () => unsubs.forEach((fn) => fn());
   }, [familyId, childrenList]);
@@ -201,7 +212,7 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
       ) {
         return { screen: 'settings', childId: null };
       }
-      if (prev.screen === 'settings') {
+      if (prev.screen === 'settings' || prev.screen === 'settings-pin') {
         return { screen: 'home', childId: null };
       }
       return { screen: 'home', childId: null };
@@ -212,6 +223,22 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
     async (childId: string, itemId: string, done: boolean) => {
       if (!familyId) return;
       await toggleChecklistItemDone(familyId, childId, itemId, done);
+    },
+    [familyId],
+  );
+
+  const startTimer = useCallback(
+    async (childId: string) => {
+      if (!familyId) return;
+      await startChildTimer(familyId, childId);
+    },
+    [familyId],
+  );
+
+  const resetTonight = useCallback(
+    async (childId: string) => {
+      if (!familyId) return;
+      await resetChildTonight(familyId, childId);
     },
     [familyId],
   );
@@ -227,7 +254,7 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
   const addNewChild = useCallback(
     async (name: string, avatar: string) => {
       if (!familyId) return;
-      await addChild(familyId, { name, avatar, order: childrenList.length });
+      await addChild(familyId, { name, avatar, order: childrenList.length, timerMinutes: 15 });
     },
     [familyId, childrenList.length],
   );
@@ -236,6 +263,14 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
     async (childId: string, name: string, avatar: string) => {
       if (!familyId) return;
       await updateChild(familyId, childId, { name, avatar });
+    },
+    [familyId],
+  );
+
+  const updateChildTimer = useCallback(
+    async (childId: string, minutes: number) => {
+      if (!familyId) return;
+      await updateChild(familyId, childId, { timerMinutes: minutes });
     },
     [familyId],
   );
@@ -285,19 +320,26 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
   );
 
   const addNewReward = useCallback(
-    async (title: string, icon: string) => {
+    async (childId: string, title: string, icon: string) => {
       if (!familyId) return;
-      await addReward(familyId, { title, icon });
+      await addReward(familyId, childId, { title, icon });
     },
     [familyId],
   );
 
   const deleteReward = useCallback(
-    async (rewardId: string) => {
+    async (childId: string, rewardId: string) => {
       if (!familyId) return;
-      await removeReward(familyId, rewardId);
+      await removeReward(familyId, childId, rewardId);
     },
     [familyId],
+  );
+
+  const getRewardsForChild = useCallback(
+    (childId: string) => {
+      return rewards[childId] || [];
+    },
+    [rewards],
   );
 
   const changePin = useCallback(
@@ -320,18 +362,20 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
           name: childNames[i],
           avatar: avatars[i % avatars.length],
           order: i,
+          timerMinutes: 15,
         });
         childIds.push(childId);
       }
 
       for (const childId of childIds) {
         await seedDefaultsForChild(id, childId, defaultChecklistItems);
+        await seedRewardsForChild(id, childId, defaultRewards);
       }
-      await seedRewards(id, defaultRewards);
 
       await saveLastFamilyId(id);
       setFamilyId(id);
       setFamilyName(name);
+      setFamilyPin(pin);
       setIsSetupComplete(true);
     },
     [],
@@ -354,6 +398,7 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
       value={{
         familyId,
         familyName,
+        familyPin,
         isLoading,
         isSetupComplete,
         children: childrenList,
@@ -365,9 +410,12 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
         navigate,
         goBack,
         toggleItem,
+        startTimer,
+        resetTonight,
         completeChild,
         addNewChild,
         editChild,
+        updateChildTimer,
         deleteChild,
         addNewChecklistItem,
         editChecklistItem,
@@ -375,6 +423,7 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
         getChecklistForChild,
         addNewReward,
         deleteReward,
+        getRewardsForChild,
         changePin,
         setupFamily,
         getChildProgress,

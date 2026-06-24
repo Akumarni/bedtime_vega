@@ -8,11 +8,17 @@ import { RewardItem } from '../types';
 import { colors, fontSize, spacing, commonStyles } from '../theme';
 
 export default function RewardWheelScreen() {
-  const { nav, children, rewards, completeChild, navigate, goBack } =
+  const { nav, children, getRewardsForChild, completeChild, navigate, goBack } =
     useFamilyContext();
 
   const child = children.find((c) => c.id === nav.childId);
+  const childRewards = nav.childId ? getRewardsForChild(nav.childId) : [];
+  const [spinning, setSpinning] = useState(false);
   const [landed, setLanded] = useState(false);
+
+  const handleSpin = () => {
+    setSpinning(true);
+  };
 
   const handleComplete = useCallback(
     async (reward: RewardItem) => {
@@ -33,19 +39,40 @@ export default function RewardWheelScreen() {
     );
   }
 
+  if (!spinning) {
+    return (
+      <View style={[commonStyles.screenContainer, styles.container]}>
+        <Text style={styles.celebEmoji}>{child.avatar}</Text>
+        <Text style={styles.title}>Great job, {child.name}!</Text>
+        <Text style={styles.subtitle}>
+          You finished your bedtime checklist
+        </Text>
+        <FocusableButton
+          label="Spin for a Reward!"
+          icon="🎰"
+          variant="accent"
+          size="lg"
+          onPress={handleSpin}
+          style={styles.spinButton}
+          hasTVPreferredFocus
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={[commonStyles.screenContainer, styles.container]}>
       <Text style={styles.title}>
-        {landed ? `${child.name} earned a reward!` : `Great job, ${child.name}!`}
+        {landed ? `${child.name} earned a reward!` : 'Spinning...'}
       </Text>
       <Text style={styles.subtitle}>
         {landed
-          ? 'Here is your prize for tonight 🎉'
-          : "Let's see what you won tonight..."}
+          ? 'Here is your prize for tonight'
+          : "Let's see what you won..."}
       </Text>
 
       <View style={styles.wheelContainer}>
-        <RewardWheel rewards={rewards} onComplete={handleComplete} />
+        <RewardWheel rewards={childRewards} onComplete={handleComplete} />
       </View>
 
       {landed && (
@@ -58,14 +85,6 @@ export default function RewardWheelScreen() {
             onPress={() => navigate('home')}
             hasTVPreferredFocus
           />
-          <FocusableButton
-            label="View Dashboard"
-            icon="📊"
-            variant="secondary"
-            size="lg"
-            onPress={() => navigate('dashboard', child.id)}
-            style={{ marginLeft: spacing.lg }}
-          />
         </TVFocusGuideView>
       )}
     </View>
@@ -77,26 +96,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  celebEmoji: {
+    fontSize: 120,
+    marginBottom: spacing.lg,
+  },
   title: {
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xl,
     fontWeight: '800',
     color: colors.accent,
     textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: fontSize.lg,
+    fontSize: fontSize.sm,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.lg,
+  },
+  spinButton: {
+    marginTop: spacing.xl,
   },
   wheelContainer: {
     flex: 1,
     justifyContent: 'center',
-    maxHeight: 900,
+    maxHeight: 700,
   },
   actions: {
     flexDirection: 'row',
-    marginTop: spacing.xxl,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
 });

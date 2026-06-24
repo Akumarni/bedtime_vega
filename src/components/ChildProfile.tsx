@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, spacing, borderRadius } from '../theme';
+import { colors, fontSize, spacing, rounded } from '../theme';
 
 interface Props {
   name: string;
@@ -51,8 +51,8 @@ export default function ChildProfile({
             ]}
           />
         </View>
-        <Text style={styles.progressText}>
-          {isComplete ? '✓ Done!' : `${completedCount}/${totalCount}`}
+        <Text style={[styles.progressText, isComplete && styles.progressDone]}>
+          {isComplete ? '✓ All Done!' : `${completedCount} of ${totalCount}`}
         </Text>
       </View>
     </TouchableOpacity>
@@ -63,25 +63,24 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.xl,
+    ...rounded('xxl'),
     padding: spacing.xl,
     alignItems: 'center',
-    borderWidth: 4,
-    borderColor: 'transparent',
-    minHeight: 440,
+    borderWidth: 2,
+    borderColor: colors.border,
+    minHeight: 400,
     justifyContent: 'center',
     marginHorizontal: spacing.md,
   },
   cardFocused: {
     borderColor: colors.focusRing,
     backgroundColor: colors.surfaceLight,
-    transform: [{ scale: 1.05 }],
   },
   cardComplete: {
     borderColor: colors.successDim,
   },
   avatar: {
-    fontSize: 120,
+    fontSize: 100,
     marginBottom: spacing.lg,
   },
   name: {
@@ -96,23 +95,27 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     width: '80%',
-    height: 16,
+    height: 12,
     backgroundColor: colors.surfaceHighlight,
-    borderRadius: borderRadius.round,
+    ...rounded('round'),
     overflow: 'hidden',
     marginBottom: spacing.sm,
   },
   progressFill: {
     height: '100%',
     backgroundColor: colors.primary,
-    borderRadius: borderRadius.round,
+    ...rounded('round'),
   },
   progressComplete: {
     backgroundColor: colors.success,
   },
   progressText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.textSecondary,
     fontWeight: '600',
+  },
+  progressDone: {
+    color: colors.success,
+    fontWeight: '700',
   },
 });

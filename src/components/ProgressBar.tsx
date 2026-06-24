@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, spacing, borderRadius } from '../theme';
+import { colors, fontSize, spacing, rounded } from '../theme';
 
 interface Props {
   completed: number;
@@ -13,7 +13,7 @@ export default function ProgressBar({
   completed,
   total,
   showLabel = true,
-  height = 16,
+  height = 12,
 }: Props) {
   const percent = total > 0 ? (completed / total) * 100 : 0;
   const allDone = completed >= total && total > 0;
@@ -31,7 +31,7 @@ export default function ProgressBar({
       </View>
       {showLabel && (
         <Text style={[styles.label, allDone && styles.labelComplete]}>
-          {allDone ? 'All done! ⭐' : `${completed} of ${total}`}
+          {allDone ? 'All done!' : `${completed} of ${total}`}
         </Text>
       )}
     </View>
@@ -45,18 +45,18 @@ const styles = StyleSheet.create({
   track: {
     width: '100%',
     backgroundColor: colors.surfaceHighlight,
-    borderRadius: borderRadius.round,
+    ...rounded('round'),
     overflow: 'hidden',
   },
   fill: {
     backgroundColor: colors.primary,
-    borderRadius: borderRadius.round,
+    ...rounded('round'),
   },
   fillComplete: {
     backgroundColor: colors.success,
   },
   label: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.textSecondary,
     marginTop: spacing.xs,
     textAlign: 'center',
