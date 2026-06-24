@@ -43,13 +43,14 @@ A bedtime routine checklist app for Fire TV Stick 4K Select (VegaOS) with a comp
 
 - Configurable 2-4 children with independent parallel checklists (per-child checklist items)
 - Independent per-child countdown timers (configurable 5-60 min in settings)
-- Manual reward wheel spin with glassmorphic selector frame
+- Manual reward wheel spin with glassmorphic selector frame (transparent glass border, no solid overlay)
 - Per-child reward lists (separate from each other)
 - Dashboard: streak counter, completion time, tonight's reward, reward history
-- Reset Tonight per child (PIN-protected, clears progress + history entry for re-do)
-- QR code on home screen for quick companion app pairing
+- Reset Tonight per child (PIN-protected, clears progress + history entry for re-do, only 1 completion tracked per night)
+- QR code on home screen for quick companion app pairing (pre-fills family code, user only enters PIN)
 - In-app settings (PIN-protected) + phone companion web app for parent control
 - Default checklist items and rewards seeded per child on first setup
+- Custom app icon (320x180 banner with moon/stars/checklist design)
 
 ## Build & Run
 
@@ -73,6 +74,8 @@ cd ~/vega_template && rm -rf src App.tsx index.js app.json && \
 npx react-native build-vega --build-type Release
 
 # 4. Deploy to Fire TV (must be on same network)
+# NOTE: if manifest.toml changed (version, icon, etc.), uninstall first:
+#   vega device uninstall-app -d 192.168.1.133:5555 --appName com.bedtime.checklist.main
 vega device install-app -d 192.168.1.133:5555 \
   --packagePath ~/vega_template/build/armv7-release/bedtimechecklist_armv7.vpkg
 vega device launch-app -d 192.168.1.133:5555 \
@@ -96,14 +99,30 @@ vega project generate --template helloWorld --name BedtimeChecklist \
 # Add firebase + qrcode-generator to template package.json dependencies
 # Then: cd ~/vega_template && npm install
 
+# Copy app icon into template (must be in assets/image/, NOT assets/raw/)
+mkdir -p ~/vega_template/assets/image
+cp ~/Documents/GitHub/bedtime_vega/assets/icon_banner.png ~/vega_template/assets/image/icon.png
+
+# Update ~/vega_template/manifest.toml to include:
+#   icon = "@image/icon.png"
+# Icon format: @image/<filename> maps to assets/image/ directory
+
 # Hermesc symlink (if build fails with "hermesc not found"):
 # The binary is at .../build/x86_64-Linux/bin/hermesc but build expects .../build/bin/hermesc
 # Create symlink: ln -s .../build/x86_64-Linux/bin .../build/bin
 ```
 
+## App Icon
+
+- Source files in `assets/`: `icon_banner.png` (320x180, used on Fire TV), `icon_banner_2x.png` (640x360, source), `icon_512.png` (512x512, for stores), `icon_256.png`, `icon_128.png`
+- Generated with ImageMagick — crescent moon, stars, checklist progress bar, "Bedtime Checklist" text
+- Manifest reference: `icon = "@image/icon.png"` — file must be in `assets/image/` directory in the vega_template
+- Fire TV home screen tiles are 320x180 (16:9 landscape) — do NOT use square icons, they get zoomed/cropped
+- Do NOT add a border/outline on the icon — the Fire TV launcher clips edges
+
 ## Environment Details
 
-**Kali Linux laptop**: Vega SDK (0.23.8128, CLI 1.3.2), Node v22. Build dir: `~/vega_template`. Source at `~/Documents/GitHub/bedtime_vega`. SSH key configured for GitHub push.
+**Kali Linux laptop**: Vega SDK (0.23.8128, CLI 1.3.2), Node v22. Build dir: `~/vega_template`. Source at `~/Documents/GitHub/bedtime_vega`. SSH key configured for GitHub push (ed25519, labeled "Kali Laptop" in GitHub).
 **Ubuntu VPS** (vega@155.138.226.194): Previous build environment. Build dir: `~/vega_template`. Firebase CLI authenticated here — use for `firebase deploy` commands.
 **Fire TV Stick 4K Select**: Target device at 192.168.1.133:5555, Developer Mode enabled.
 
@@ -112,6 +131,7 @@ vega project generate --template helloWorld --name BedtimeChecklist \
 2. Copy source into template: see Build & Run above
 3. Build: `npx react-native build-vega --build-type Release`
 4. Deploy: `vega device install-app` + `vega device launch-app`
+5. If manifest changed: uninstall first, then install fresh
 
 ### Companion Web App Deploy
 Firebase CLI won't authenticate on the Kali laptop (non-interactive terminal issue). Deploy from the VPS or a machine with Firebase CLI logged in:
@@ -121,7 +141,10 @@ cd web-companion && npm run build && firebase deploy --only hosting
 
 ## Firebase Database Rules
 
-Rules are at `database.rules.json`. Currently open read/write per family path. Rewards validation needs updating since rewards moved from `families/{familyId}/rewards/` to `families/{familyId}/children/{childId}/rewards/`.
+Rules are at `database.rules.json`. Need updating:
+- Rewards moved from `families/{familyId}/rewards/` to `families/{familyId}/children/{childId}/rewards/` — old rewards validation rule is stale
+- `timerMinutes` field added to children — no validation rule yet
+- `timerStartedAt` field added to tonight progress — no validation rule yet
 
 ## Status
 
@@ -132,15 +155,25 @@ Rules are at `database.rules.json`. Currently open read/write per family path. R
 - [x] Back button on remote navigates within app (doesn't exit)
 - [x] Per-child checklists, rewards, and timers
 - [x] PIN-protected settings
-- [x] Reset Tonight per child
-- [x] Reward wheel with manual spin and glassmorphic selector
+- [x] Reset Tonight per child (clears progress + removes history entry)
+- [x] Reward wheel with manual spin trigger and glassmorphic selector
 - [x] Dashboard with streak, completion time, tonight's reward
-- [x] QR code pairing for companion app
-- [x] Companion web app updated for per-child data + QR pre-fill
+- [x] QR code pairing for companion app (pre-fills family code)
+- [x] Companion web app updated for per-child data + QR pre-fill + timer config
+- [x] Companion web app deployed to Firebase Hosting
+- [x] Custom app icon (320x180 banner) showing on Fire TV home screen
+- [x] Production UI polish pass — modern color palette, refined typography, clean card designs
 - [x] Git repo synced to GitHub with SSH auth from Kali laptop
+- [x] Test family data cleaned out of Firebase
 
-### TODO
-- [ ] Deploy updated companion web app to Firebase Hosting (need Firebase CLI auth — do from VPS)
-- [ ] Update Firebase database rules for per-child rewards path
-- [ ] Test full flow end-to-end with real family data
-- [ ] Clean up companion web app UI to match TV app polish level
+### POSSIBLE NEXT STEPS
+- [ ] Update Firebase database rules for per-child rewards path and new fields
+- [ ] End-to-end testing with real family data over multiple nights
+- [ ] Polish companion web app UI to match TV app design refresh
+- [ ] Add sound effects (checklist item check, reward wheel spin, completion celebration)
+- [ ] Add ability to reorder checklist items (drag or up/down buttons)
+- [ ] Add ability to edit existing checklist item/reward names (currently can only add/remove)
+- [ ] Add weekly/monthly stats to dashboard (average completion time, best streak)
+- [ ] Add multiple device support (e.g., tablet in kid's room + TV in living room)
+- [ ] Investigate app store submission requirements for Vega/Fire TV
+- [ ] Add splash screen image (SplashScreenImages.zip) for loading screen branding
