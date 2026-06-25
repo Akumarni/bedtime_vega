@@ -27,10 +27,24 @@ function AppRouter() {
 
   if (isLoading) {
     return (
-      <View style={styles.loading}>
-        <Text style={styles.loadingMoon}>🌙</Text>
-        <ActivityIndicator size="large" color={colors.primaryLight} />
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={styles.splash}>
+        <View style={styles.splashStars}>
+          <Text style={styles.splashStar1}>⭐</Text>
+          <Text style={styles.splashStar2}>✨</Text>
+          <Text style={styles.splashStar3}>⭐</Text>
+          <Text style={styles.splashStar4}>✨</Text>
+          <Text style={styles.splashStar5}>⭐</Text>
+        </View>
+        <Text style={styles.splashMoon}>🌙</Text>
+        <Text style={styles.splashTitle}>Bedtime</Text>
+        <Text style={styles.splashTitleAccent}>Checklist</Text>
+        <View style={styles.splashDivider} />
+        <Text style={styles.splashTagline}>Making bedtime an adventure</Text>
+        <ActivityIndicator
+          size="large"
+          color={colors.primaryLight}
+          style={styles.splashSpinner}
+        />
       </View>
     );
   }
@@ -69,19 +83,76 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  loading: {
+  splash: {
     flex: 1,
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loadingMoon: {
-    fontSize: 80,
-    marginBottom: spacing.xl,
+  splashStars: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  loadingText: {
-    fontSize: fontSize.md,
+  splashStar1: {
+    position: 'absolute',
+    top: 60,
+    left: 200,
+    fontSize: 32,
+  },
+  splashStar2: {
+    position: 'absolute',
+    top: 40,
+    right: 300,
+    fontSize: 24,
+  },
+  splashStar3: {
+    position: 'absolute',
+    top: 150,
+    right: 120,
+    fontSize: 28,
+  },
+  splashStar4: {
+    position: 'absolute',
+    bottom: 140,
+    left: 150,
+    fontSize: 20,
+  },
+  splashStar5: {
+    position: 'absolute',
+    bottom: 100,
+    right: 350,
+    fontSize: 26,
+  },
+  splashMoon: {
+    fontSize: 120,
+    marginBottom: spacing.lg,
+  },
+  splashTitle: {
+    fontSize: fontSize.hero,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  splashTitleAccent: {
+    fontSize: fontSize.xl,
+    fontWeight: '700',
+    color: colors.accent,
+    marginTop: -spacing.sm,
+  },
+  splashDivider: {
+    width: 120,
+    height: 3,
+    backgroundColor: colors.primary,
+    marginVertical: spacing.lg,
+  },
+  splashTagline: {
+    fontSize: fontSize.sm,
     color: colors.textSecondary,
-    marginTop: spacing.md,
+    fontStyle: 'italic',
+  },
+  splashSpinner: {
+    marginTop: spacing.xxl,
   },
 });

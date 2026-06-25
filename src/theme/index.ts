@@ -27,6 +27,9 @@ export const colors = {
   focusRing: '#A29BFE',
   focusGlow: '#3D3762',
 
+  warning: '#FDCB6E',
+  warningDim: '#7A6530',
+
   danger: '#E17055',
   dangerDim: '#7A3E30',
 

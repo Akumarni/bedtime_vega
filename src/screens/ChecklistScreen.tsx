@@ -98,6 +98,12 @@ export default function ChecklistScreen() {
   }
 
   const timerExpired = remainingSeconds !== null && remainingSeconds <= 0;
+  const totalSeconds = timerMinutes * 60;
+  const timerFraction = remainingSeconds !== null ? remainingSeconds / totalSeconds : 1;
+  const timerColor = timerExpired ? 'danger' as const
+    : timerFraction <= 0.25 ? 'danger' as const
+    : timerFraction <= 0.5 ? 'warning' as const
+    : 'success' as const;
 
   return (
     <View style={commonStyles.screenContainer}>
@@ -115,14 +121,6 @@ export default function ChecklistScreen() {
         </View>
 
         <View style={styles.headerRight}>
-          {remainingSeconds !== null && (
-            <View style={[styles.timerPill, timerExpired && styles.timerExpired]}>
-              <Text style={styles.timerIcon}>{timerExpired ? '⏰' : '⏱️'}</Text>
-              <Text style={[styles.timerText, timerExpired && styles.timerTextExpired]}>
-                {timerExpired ? "Time's up" : formatTime(remainingSeconds)}
-              </Text>
-            </View>
-          )}
           <View style={styles.progressBox}>
             <ProgressBar
               completed={progress.completed}
@@ -135,6 +133,15 @@ export default function ChecklistScreen() {
           </View>
         </View>
       </View>
+
+      {remainingSeconds !== null && (
+        <View style={[styles.timerBar, { borderColor: colors[timerColor], backgroundColor: timerColor === 'danger' ? colors.dangerDim : timerColor === 'warning' ? colors.warningDim : colors.successDim }]}>
+          <Text style={styles.timerIcon}>{timerExpired ? '⏰' : '⏱️'}</Text>
+          <Text style={[styles.timerText, { color: colors[timerColor] }]}>
+            {timerExpired ? "Time's up!" : formatTime(remainingSeconds)}
+          </Text>
+        </View>
+      )}
 
       {allDone && (
         <View style={styles.completeBanner}>
@@ -218,32 +225,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
-  timerPill: {
+  timerBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    ...rounded('round'),
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginRight: spacing.lg,
-  },
-  timerExpired: {
-    borderColor: colors.danger,
-    backgroundColor: colors.dangerDim,
+    justifyContent: 'center',
+    backgroundColor: colors.successDim,
+    ...rounded('lg'),
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderWidth: 2,
+    borderColor: colors.success,
+    marginBottom: spacing.md,
   },
   timerIcon: {
-    fontSize: 28,
-    marginRight: spacing.sm,
+    fontSize: 48,
+    marginRight: spacing.md,
   },
   timerText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.lg,
     fontWeight: '700',
-    color: colors.accent,
-  },
-  timerTextExpired: {
-    color: colors.danger,
+    color: colors.success,
   },
   progressBox: {
     width: 200,

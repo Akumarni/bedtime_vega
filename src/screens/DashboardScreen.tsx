@@ -28,6 +28,17 @@ export default function DashboardScreen() {
     completionTime = formatElapsed(childTonight.completedAt - childTonight.timerStartedAt);
   }
 
+  const now = new Date();
+  const weekAgo = new Date(now);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const monthAgo = new Date(now);
+  monthAgo.setDate(monthAgo.getDate() - 30);
+
+  const thisWeekCount = childHistory.filter((e) => e.timestamp >= weekAgo.getTime()).length;
+  const thisMonthCount = childHistory.filter((e) => e.timestamp >= monthAgo.getTime()).length;
+
+  const bestStreak = computeBestStreak(childHistory.map((e) => e.date));
+
   const rewardCounts: Record<string, { count: number; icon: string }> = {};
   for (const entry of childHistory) {
     if (!rewardCounts[entry.rewardTitle]) {
@@ -35,6 +46,8 @@ export default function DashboardScreen() {
     }
     rewardCounts[entry.rewardTitle].count++;
   }
+
+  const topReward = Object.entries(rewardCounts).sort((a, b) => b[1].count - a[1].count)[0];
 
   return (
     <View style={commonStyles.screenContainer}>
@@ -84,6 +97,36 @@ export default function DashboardScreen() {
             </View>
           </View>
 
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statEmoji}>📅</Text>
+              <Text style={styles.statValue}>{thisWeekCount}</Text>
+              <Text style={styles.statLabel}>This Week</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statEmoji}>📆</Text>
+              <Text style={styles.statValue}>{thisMonthCount}</Text>
+              <Text style={styles.statLabel}>Last 30 Days</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statEmoji}>🏆</Text>
+              <Text style={styles.statValue}>{bestStreak}</Text>
+              <Text style={styles.statLabel}>Best Streak</Text>
+            </View>
+          </View>
+
+          {topReward && (
+            <View style={styles.topRewardBanner}>
+              <Text style={styles.topRewardIcon}>{topReward[1].icon}</Text>
+              <View style={styles.topRewardInfo}>
+                <Text style={styles.topRewardLabel}>Most Earned Reward</Text>
+                <Text style={styles.topRewardName}>
+                  {topReward[0]} ({topReward[1].count}x)
+                </Text>
+              </View>
+            </View>
+          )}
+
           {childTonight?.allComplete && (
             <View style={styles.tonightBanner}>
               <Text style={styles.tonightIcon}>{childTonight.rewardIcon}</Text>
@@ -126,6 +169,25 @@ export default function DashboardScreen() {
       )}
     </View>
   );
+}
+
+function computeBestStreak(dates: string[]): number {
+  if (dates.length === 0) return 0;
+  const uniqueDates = [...new Set(dates)].sort();
+  let best = 1;
+  let current = 1;
+  for (let i = 1; i < uniqueDates.length; i++) {
+    const prev = new Date(uniqueDates[i - 1]);
+    const curr = new Date(uniqueDates[i]);
+    const diffDays = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
+    if (Math.round(diffDays) === 1) {
+      current++;
+      if (current > best) best = current;
+    } else {
+      current = 1;
+    }
+  }
+  return best;
 }
 
 function computeStreak(dates: string[]): number {
@@ -197,6 +259,34 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xs,
     fontWeight: '500',
+  },
+  topRewardBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    ...rounded('xl'),
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  topRewardIcon: {
+    fontSize: 56,
+    marginRight: spacing.lg,
+  },
+  topRewardInfo: {
+    flex: 1,
+  },
+  topRewardLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  topRewardName: {
+    fontSize: fontSize.md,
+    fontWeight: '700',
+    color: colors.accent,
+    marginTop: spacing.xs,
   },
   tonightBanner: {
     flexDirection: 'row',

@@ -174,12 +174,13 @@ Rules are at `database.rules.json`. Updated with:
 - [x] Companion web app: reorder buttons (up/down arrows) for checklist items
 - [x] Companion web app: history page with stats — streak, this week/month/all-time counts, most earned reward
 - [x] TV app: show one checklist item at a time (completed items as compact chips, step counter, "up next" hint)
+- [x] Built and deployed TV app with one-at-a-time checklist from Kali laptop
+- [x] Timer redesign: large full-width bar below header, color-coded green→yellow→red based on time remaining
+- [x] In-app splash screen (branded loading view with moon, stars, app title, tagline)
+- [x] Dashboard: weekly/monthly stats (this week, last 30 days, best streak, most earned reward)
 
 ### POSSIBLE NEXT STEPS
 - [ ] End-to-end testing with real family data over multiple nights
-- [ ] Build and deploy TV app with one-at-a-time checklist (needs build on Kali laptop)
-- [ ] Add sound effects (checklist item check, reward wheel spin, completion celebration)
-- [ ] Add weekly/monthly stats to dashboard (average completion time, best streak)
 - [ ] Add multiple device support (e.g., tablet in kid's room + TV in living room)
 - [ ] Investigate app store submission requirements for Vega/Fire TV
 - [ ] Add splash screen image (SplashScreenImages.zip) for loading screen branding
