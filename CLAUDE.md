@@ -179,8 +179,9 @@ Rules are at `database.rules.json`. Updated with:
 - [x] In-app splash screen (branded loading view with moon, stars, app title, tagline)
 - [x] Dashboard: weekly/monthly stats (this week, last 30 days, best streak, most earned reward)
 
+### IN PROGRESS
+- [ ] End-to-end testing with real family data over multiple nights (started 2026-06-24)
+
 ### POSSIBLE NEXT STEPS
-- [ ] End-to-end testing with real family data over multiple nights
-- [ ] Add multiple device support (e.g., tablet in kid's room + TV in living room)
 - [ ] Investigate app store submission requirements for Vega/Fire TV
-- [ ] Add splash screen image (SplashScreenImages.zip) for loading screen branding
+- [ ] Add native VegaOS splash screen image (SplashScreenImages.zip) for pre-app loading
